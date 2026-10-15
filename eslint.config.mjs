@@ -18,6 +18,12 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "scripts/**",
+      // Artefatos gerados pelo PWA no build
+      "public/sw.js",
+      "public/workbox-*.js",
+      "public/fallback-*.js",
+      "public/swe-worker-*.js",
     ],
   },
 ];

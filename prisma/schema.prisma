@@ -1,0 +1,267 @@
+// =============================================================================
+// PersEventos — schema Prisma (modelagem de referência)
+// -----------------------------------------------------------------------------
+// A aplicação em produção usa Supabase (Postgres + Auth + RLS). Este schema
+// espelha EXATAMENTE o banco criado pelas migrations em `supabase/migrations/`
+// e serve como documentação do modelo e para tooling (Prisma Studio, geração de
+// tipos, introspecção). Os nomes de tabela/coluna usam snake_case via @map.
+//
+// Observações:
+//   * `profiles.id` referencia `auth.users(id)` (gerenciado pelo Supabase Auth);
+//     o Prisma não modela o schema `auth`, então a coluna é declarada como String.
+//   * `sync_status`, `sync_queue`, `sync_cursor` e `arquivos` são estruturas
+//     LOCAIS do cliente (IndexedDB/Dexie) e por isso NÃO existem no Postgres.
+//
+// Validar/formatar:  npx prisma validate && npx prisma format
+// Introspecção:      npx prisma db pull
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum Papel {
+  super_admin
+  tenant_admin
+  admin
+  staff
+  recepcao
+  cliente
+}
+
+enum InscricaoStatus {
+  inscrito
+  confirmado
+  checkin
+  checkout
+  cancelado
+}
+
+enum PagamentoStatus {
+  pendente
+  pago
+  isento
+  reembolsado
+}
+
+enum TermoTipo {
+  responsabilidade
+  imagem
+}
+
+/// Tenant raiz. Único modelo sem tenant_id.
+model Estabelecimento {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome     String
+  slug     String  @unique
+  cnpj     String? @unique
+  email    String?
+  telefone String?
+  endereco String?
+  cidade   String?
+  estado   String?
+  logoUrl  String? @map("logo_url")
+  ativo    Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  profiles     Profile[]
+  pessoas      Pessoa[]
+  menores      Menor[]
+  eventos      Evento[]
+  inscricoes   Inscricao[]
+  documentos   Documento[]
+  termos       Termo[]
+  logsAcesso   LogAcessoDados[]
+
+  @@map("estabelecimentos")
+}
+
+/// Perfil do usuário (1:1 com auth.users). Define papel e tenant.
+model Profile {
+  id       String  @id @db.Uuid // = auth.users.id
+  nome     String?
+  email    String?
+  papel    Papel   @default(cliente)
+  tenantId String? @map("tenant_id") @db.Uuid
+  pessoaId String? @map("pessoa_id") @db.Uuid
+  ativo    Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  pessoa          Pessoa?          @relation(fields: [pessoaId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([pessoaId])
+  @@map("profiles")
+}
+
+model Pessoa {
+  id                    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String? @map("tenant_id") @db.Uuid
+  nomeCompleto          String  @map("nome_completo")
+  cpf                   String? @unique
+  rg                    String?
+  dataNascimento        String? @map("data_nascimento") @db.Date
+  telefone              String?
+  email                 String?
+  endereco              String?
+  contatoEmergenciaNome String? @map("contato_emergencia_nome")
+  contatoEmergenciaTelefone String? @map("contato_emergencia_telefone")
+  restricoesAlimentares String? @map("restricoes_alimentares")
+  condicoesSaude        String? @map("condicoes_saude")
+  medicacoes            String?
+  observacoes           String?
+  consentimentoLgpd     Boolean @default(false) @map("consentimento_lgpd")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menores         Menor[]
+  inscricoes      Inscricao[]
+  documentos      Documento[]
+  termos          Termo[]
+  profiles        Profile[]
+
+  @@index([tenantId])
+  @@index([cpf])
+  @@index([updatedAt])
+  @@map("pessoas")
+}
+
+model Menor {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String? @map("tenant_id") @db.Uuid
+  pessoaId         String  @map("pessoa_id") @db.Uuid
+  responsavelNome  String  @map("responsavel_nome")
+  responsavelCpf   String  @map("responsavel_cpf")
+  autorizacaoUrl   String? @map("autorizacao_url")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pessoa          Pessoa           @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([pessoaId])
+  @@map("menores")
+}
+
+model Evento {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String? @map("tenant_id") @db.Uuid
+  nome       String
+  descricao  String?
+  dataInicio DateTime @map("data_inicio") @db.Timestamptz(6)
+  dataFim    DateTime? @map("data_fim") @db.Timestamptz(6)
+  local      String?
+  capacidade Int?
+  status     String  @default("planejado")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inscricoes      Inscricao[]
+  termos          Termo[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([dataInicio])
+  @@map("eventos")
+}
+
+model Inscricao {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String?         @map("tenant_id") @db.Uuid
+  pessoaId        String          @map("pessoa_id") @db.Uuid
+  eventoId        String          @map("evento_id") @db.Uuid
+  status          InscricaoStatus @default(inscrito)
+  dataCheckin     DateTime?       @map("data_checkin") @db.Timestamptz(6)
+  dataCheckout    DateTime?       @map("data_checkout") @db.Timestamptz(6)
+  pagamentoStatus PagamentoStatus @default(pendente) @map("pagamento_status")
+  valor           Decimal?        @db.Decimal(10, 2)
+  formaPagamento  String?         @map("forma_pagamento")
+  termoAssinado   Boolean         @default(false) @map("termo_assinado")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pessoa          Pessoa           @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, pessoaId])
+  @@index([tenantId])
+  @@index([eventoId])
+  @@index([pessoaId])
+  @@map("inscricoes")
+}
+
+model Documento {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  pessoaId   String   @map("pessoa_id") @db.Uuid
+  tipo       String
+  url        String
+  uploadedAt DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pessoa          Pessoa           @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([pessoaId])
+  @@map("documentos")
+}
+
+model Termo {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String?   @map("tenant_id") @db.Uuid
+  pessoaId      String    @map("pessoa_id") @db.Uuid
+  eventoId      String?   @map("evento_id") @db.Uuid
+  tipo          TermoTipo
+  aceitoEm      DateTime  @default(now()) @map("aceito_em") @db.Timestamptz(6)
+  ip            String?
+  assinaturaUrl String?   @map("assinatura_url")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pessoa          Pessoa           @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  evento          Evento?          @relation(fields: [eventoId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([pessoaId])
+  @@index([eventoId, tipo])
+  @@map("termos")
+}
+
+/// Auditoria LGPD: quem acessou/gravou dados sensíveis.
+model LogAcessoDados {
+  id       BigInt   @id @default(autoincrement())
+  tenantId String?  @map("tenant_id") @db.Uuid
+  userId   String?  @map("user_id") @db.Uuid
+  pessoaId String?  @map("pessoa_id") @db.Uuid
+  acao     String
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  estabelecimento Estabelecimento? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([pessoaId])
+  @@index([userId])
+  @@map("log_acesso_dados")
+}

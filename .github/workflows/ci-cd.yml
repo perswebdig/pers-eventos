@@ -1,0 +1,342 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22.x'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Lint & Typecheck (fast, runs first)
+  # ─────────────────────────────────────────────────────────────
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
+
+  # ─────────────────────────────────────────────────────────────
+  # Unit & Integration Tests
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test --if-present
+
+      - name: Run verification scripts
+        run: |
+          npm run db:verify
+          npm run sync:verify
+          npm run pessoas:verify
+          npm run eventos:verify
+          npm run checkin:verify
+          npm run relatorios:verify
+
+  # ─────────────────────────────────────────────────────────────
+  # Build (runs after lint + test pass)
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: Build Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint-and-typecheck, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate PWA icons
+        run: npm run icons
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: |
+            .next
+            public
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # E2E Tests (Playwright) - runs against preview deployment
+  # ─────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+
+      - name: Start preview server
+        run: |
+          npm run start &
+          sleep 10
+          curl -f http://localhost:3000 || exit 1
+
+      - name: Run Playwright tests
+        run: npx playwright test --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Deploy Preview (Vercel) - automatic on PR
+  # ─────────────────────────────────────────────────────────────
+  deploy-preview:
+    name: Deploy Preview (Vercel)
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel Preview
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "PREVIEW_URL=$url" >> $GITHUB_ENV
+
+      - name: Comment PR with Preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployment ready: ${{ env.PREVIEW_URL }}'
+            })
+
+  # ─────────────────────────────────────────────────────────────
+  # Deploy Production (Vercel) - on merge to main
+  # ─────────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy Production (Vercel)
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test, build, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel Production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Notify Deployment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ github.event.deployment.id }},
+              state: status === 'success' ? 'success' : 'error',
+              log_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: status === 'success' ? 'Production deploy successful' : 'Production deploy failed'
+            });
+
+  # ─────────────────────────────────────────────────────────────
+  # Dependency Audit & Security Scan
+  # ─────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
+      - name: Run Snyk (if configured)
+        if: env.SNYK_TOKEN != ''
+        uses: snyk/actions/node@master
+        with:
+          command: test
+          args: --severity-threshold=high
+
+  # ─────────────────────────────────────────────────────────────
+  # Bundle Size Analysis
+  # ─────────────────────────────────────────────────────────────
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next
+
+      - name: Analyze bundle
+        run: |
+          npx @next/bundle-analyzer --help 2>/dev/null || npm i -g @next/bundle-analyzer
+          ANALYZE=true npm run build 2>&1 | tail -50
+
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-report
+          path: .next/analyze
+          retention-days: 7
+
+      - name: Comment PR with bundle stats
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = '.next/analyze/client.html';
+            if (fs.existsSync(reportPath)) {
+              const content = fs.readFileSync(reportPath, 'utf8');
+              const match = content.match(/Total.*?(\d+\.?\d*)\s*(KB|MB)/);
+              if (match) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `📦 Bundle analysis: ${match[0]}`
+                });
+              }
+            }
+
+  # ─────────────────────────────────────────────────────────────
+  # Notify on failure
+  # ─────────────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify Failure
+    needs: [lint-and-typecheck, test, build, e2e, deploy-preview, deploy-production, security-audit, bundle-analysis]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **CI/CD Pipeline Failed**\n\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nCheck the failed jobs above.`
+            })
