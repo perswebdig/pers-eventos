@@ -17,6 +17,7 @@
     "pessoas:verify": "tsx scripts/verify-pessoas.ts",
     "eventos:verify": "tsx scripts/verify-eventos.ts",
     "checkin:verify": "tsx scripts/verify-checkin.ts",
+    "ingressos:verify": "tsx scripts/verify-ingressos.ts",
     "relatorios:verify": "tsx scripts/verify-relatorios.ts",
     "test": "vitest run",
     "test:watch": "vitest",

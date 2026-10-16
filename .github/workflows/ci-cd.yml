@@ -69,6 +69,7 @@ jobs:
           npm run pessoas:verify
           npm run eventos:verify
           npm run checkin:verify
+          npm run ingressos:verify
           npm run relatorios:verify
 
   # ─────────────────────────────────────────────────────────────

@@ -37,10 +37,18 @@ import {
   buscarInscricoes,
 } from "@/db/repos/eventos";
 import type { InscricaoDetalhe } from "@/db/repos/eventos";
+import {
+  contagemCheckinsPendentes,
+  fazerCheckinTicket,
+  getTicketByHash,
+  getTicketDetalhe,
+} from "@/db/repos/ingressos";
+import type { TicketDetalhe } from "@/db/repos/ingressos";
 import type { EventoLocal } from "@/db/types";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { QrScanner, isQrScanSupported } from "./qr-scanner";
-import { parseInscricaoQr, encodeInscricaoQr } from "./qr";
+import { parseInscricaoQr, encodeInscricaoQr, parseIngressoQr } from "./qr";
+import { TicketActionCard } from "./ticket-card";
 import { QRCodeSVG } from "qrcode.react";
 import { TermoAceiteSheet } from "@/features/termos/termo-aceite-sheet";
 import { jaAceitouTermo } from "@/db/repos/termos";
@@ -167,6 +175,7 @@ export function CheckinView() {
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<InscricaoDetalhe[]>([]);
   const [selecionada, setSelecionada] = useState<InscricaoDetalhe | null>(null);
+  const [ticketSelecionado, setTicketSelecionado] = useState<TicketDetalhe | null>(null);
   const [eventoFiltro, setEventoFiltro] = useState<string | null>(null);
   const [erroScanner, setErroScanner] = useState<string | null>(null);
   const [termoSheet, setTermoSheet] = useState<{
@@ -178,11 +187,12 @@ export function CheckinView() {
   } | null>(null);
 
   const eventos = useLiveQuery(() => listEventos(), []);
+  const checkinsPendentes = useLiveQuery(() => contagemCheckinsPendentes(), []);
   const suporteScanner = isQrScanSupported();
 
   useEffect(() => {
-    if (selecionada) setScannerAtivo(false);
-  }, [selecionada]);
+    if (selecionada || ticketSelecionado) setScannerAtivo(false);
+  }, [selecionada, ticketSelecionado]);
 
   async function fazerCheckinComTermo(
     inscricaoId: string,
@@ -201,11 +211,33 @@ export function CheckinView() {
     else toast.error("Falha ao registrar check-in");
   }
 
-  useEffect(() => {
-    if (selecionada) setScannerAtivo(false);
-  }, [selecionada]);
+  async function handleCheckinTicket(ticketId: string) {
+    const r = await fazerCheckinTicket(ticketId);
+    if (!r) {
+      toast.error("Falha ao registrar o check-in do ingresso");
+      return;
+    }
+    toast.success("Check-in do ingresso realizado", {
+      description: "Registrado neste dispositivo; sincroniza automaticamente com conexão.",
+    });
+    setTicketSelecionado(await getTicketDetalhe(r));
+  }
 
   async function resolverTexto(texto: string) {
+    // QR de ingresso (PERS2:<hash>) tem prioridade.
+    const hash = parseIngressoQr(texto);
+    if (hash) {
+      const ticket = await getTicketByHash(hash);
+      if (!ticket) {
+        toast.error("Ingresso não encontrado neste dispositivo (ainda não sincronizado?).");
+        return;
+      }
+      setTicketSelecionado(await getTicketDetalhe(ticket));
+      setSelecionada(null);
+      setBusca("");
+      setResultados([]);
+      return;
+    }
     const id = parseInscricaoQr(texto);
     if (id) {
       const det = await getInscricaoDetalhe(id);
@@ -214,6 +246,7 @@ export function CheckinView() {
         return;
       }
       setSelecionada(det);
+      setTicketSelecionado(null);
       setBusca("");
       setResultados([]);
       return;
@@ -246,7 +279,17 @@ export function CheckinView() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-4 text-xl font-semibold">Recepção</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">Recepção</h1>
+        {checkinsPendentes && checkinsPendentes > 0 ? (
+          <Badge
+            variant="outline"
+            className="border-amber-500/40 text-amber-600 dark:text-amber-500"
+          >
+            {checkinsPendentes} check-in(s) aguardando sincronização
+          </Badge>
+        ) : null}
+      </div>
 
       <Card className="mb-4">
         <CardContent className="pt-6 grid gap-3">
@@ -298,8 +341,8 @@ export function CheckinView() {
             <Input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Código QR, ID da inscrição ou nome do participante"
-              aria-label="Buscar inscrição"
+              placeholder="QR de ingresso, QR/id da inscrição ou nome do participante"
+              aria-label="Buscar inscrição ou ingresso"
               className="flex-1"
             />
             <Button type="submit">Buscar</Button>
@@ -317,7 +360,13 @@ export function CheckinView() {
         </Card>
       )}
 
-      {selecionada ? (
+      {ticketSelecionado ? (
+        <TicketActionCard
+          det={ticketSelecionado}
+          onClose={() => setTicketSelecionado(null)}
+          onCheckin={handleCheckinTicket}
+        />
+      ) : selecionada ? (
         <ActionCard
           det={selecionada}
           onClose={() => setSelecionada(null)}

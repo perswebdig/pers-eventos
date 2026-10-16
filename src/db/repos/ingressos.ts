@@ -58,10 +58,7 @@ export async function fazerCheckinTicket(ticketId: string): Promise<TicketLocal 
   await db.tickets.put(record);
 
   if (!jaEmCheckin) {
-    const existente = await db.checkin_queue
-      .where("ticket_id")
-      .equals(ticketId)
-      .first();
+    const existente = await db.checkin_queue.where("ticket_id").equals(ticketId).first();
     if (!existente) {
       await db.checkin_queue.add({
         ticket_id: ticketId,
@@ -88,9 +85,7 @@ export interface ResumoVendas {
 // Resumo de vendas (offline) a partir dos pedidos pagos já sincronizados.
 export async function resumoVendas(eventoId?: string): Promise<ResumoVendas> {
   const orders = await db.orders.toArray();
-  const pagos = orders.filter(
-    (o) => o.status === "paid" && (!eventoId || o.event_id === eventoId),
-  );
+  const pagos = orders.filter((o) => o.status === "paid" && (!eventoId || o.event_id === eventoId));
   return {
     ingressosVendidos: pagos.reduce((acc, o) => acc + (o.quantity ?? 0), 0),
     receita: pagos.reduce((acc, o) => acc + Number(o.total_amount ?? 0), 0),

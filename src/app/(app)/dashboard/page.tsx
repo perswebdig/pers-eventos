@@ -1,8 +1,16 @@
 import Link from "next/link";
-import { Users, CalendarDays, CheckCircle2, ClipboardList, TrendingUp } from "lucide-react";
+import {
+  Users,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  TrendingUp,
+  Ticket,
+} from "lucide-react";
 import { requireTenant } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -36,6 +44,20 @@ async function contarCheckinsHoje(tenantId: string) {
   return count ?? 0;
 }
 
+async function resumoIngressos(tenantId: string) {
+  if (!isSupabaseConfigured) return { vendidos: 0, receita: 0 };
+  const supabase = await createClient();
+  const [{ count }, { data }] = await Promise.all([
+    supabase
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId),
+    supabase.from("orders").select("total_amount").eq("tenant_id", tenantId).eq("status", "paid"),
+  ]);
+  const receita = (data ?? []).reduce((acc, o) => acc + Number(o.total_amount ?? 0), 0);
+  return { vendidos: count ?? 0, receita };
+}
+
 async function eventosProximos(tenantId: string) {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
@@ -54,15 +76,23 @@ async function eventosProximos(tenantId: string) {
 export default async function DashboardPage() {
   const ctx = await requireTenant();
 
-  const [totalPessoas, totalEventos, totalInscricoes, totalTermos, checkinsHoje, proximos] =
-    await Promise.all([
-      contar("pessoas", ctx.tenantId),
-      contar("eventos", ctx.tenantId),
-      contar("inscricoes", ctx.tenantId),
-      contar("termos", ctx.tenantId),
-      contarCheckinsHoje(ctx.tenantId),
-      eventosProximos(ctx.tenantId),
-    ]);
+  const [
+    totalPessoas,
+    totalEventos,
+    totalInscricoes,
+    totalTermos,
+    checkinsHoje,
+    proximos,
+    ingressos,
+  ] = await Promise.all([
+    contar("pessoas", ctx.tenantId),
+    contar("eventos", ctx.tenantId),
+    contar("inscricoes", ctx.tenantId),
+    contar("termos", ctx.tenantId),
+    contarCheckinsHoje(ctx.tenantId),
+    eventosProximos(ctx.tenantId),
+    resumoIngressos(ctx.tenantId),
+  ]);
 
   const cards = [
     { label: "Pessoas", value: totalPessoas, icon: Users, href: "/pessoas" },
@@ -70,6 +100,13 @@ export default async function DashboardPage() {
     { label: "Inscrições", value: totalInscricoes, icon: ClipboardList, href: "/eventos" },
     { label: "Termos aceitos", value: totalTermos, icon: CheckCircle2, href: "/termos" },
     { label: "Check-ins hoje", value: checkinsHoje, icon: TrendingUp, href: "/checkin" },
+    {
+      label: "Vendas de ingressos",
+      value: formatCurrency(ingressos.receita),
+      hint: `${ingressos.vendidos} ingresso(s) vendido(s)`,
+      icon: Ticket,
+      href: "/eventos",
+    },
   ];
 
   return (
@@ -93,7 +130,7 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
         {cards.map((c) => (
           <Card key={c.label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -102,6 +139,9 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold">{c.value}</p>
+              {"hint" in c && c.hint ? (
+                <p className="mt-1 text-xs text-muted-foreground">{c.hint}</p>
+              ) : null}
             </CardContent>
           </Card>
         ))}

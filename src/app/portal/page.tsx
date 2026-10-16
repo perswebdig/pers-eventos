@@ -17,7 +17,7 @@ export default async function PortalIndexPage() {
           : "Bem-vindo ao portal do cliente."}
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">Cadastro</CardTitle>
@@ -48,6 +48,21 @@ export default async function PortalIndexPage() {
               className="w-full"
             >
               Ver eventos
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Ingressos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              render={<Link href="/portal/ingressos">Meus Ingressos</Link>}
+              size="sm"
+              variant="outline"
+              className="w-full"
+            >
+              Meus Ingressos
             </Button>
           </CardContent>
         </Card>

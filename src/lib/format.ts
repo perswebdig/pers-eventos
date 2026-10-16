@@ -51,3 +51,8 @@ export function formatDateTime(iso: string | null | undefined): string {
     month: "2-digit",
   });
 }
+
+export function formatCurrency(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined || Number.isNaN(valor)) return "—";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}

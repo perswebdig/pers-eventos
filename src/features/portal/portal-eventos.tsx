@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, MapPin } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, MapPin, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,18 +106,31 @@ export function PortalEventos() {
                     ) : null}
                   </div>
                 </div>
-                {jaInscrito ? (
-                  <Badge
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    size="sm"
                     variant="outline"
-                    className="border-green-600/30 text-green-700 dark:text-green-500"
+                    render={
+                      <Link href={`/portal/eventos/${e.id}`}>
+                        <Ticket className="size-4" /> Comprar
+                      </Link>
+                    }
                   >
-                    Inscrito
-                  </Badge>
-                ) : (
-                  <Button size="sm" disabled={enviando === e.id} onClick={() => inscrever(e.id)}>
-                    Inscrever-se
+                    Comprar
                   </Button>
-                )}
+                  {jaInscrito ? (
+                    <Badge
+                      variant="outline"
+                      className="border-green-600/30 text-green-700 dark:text-green-500"
+                    >
+                      Inscrito
+                    </Badge>
+                  ) : (
+                    <Button size="sm" disabled={enviando === e.id} onClick={() => inscrever(e.id)}>
+                      Inscrever-se
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </li>

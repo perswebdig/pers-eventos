@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { encodeInscricaoQr } from "@/features/checkin/qr";
+import { LotesSection } from "@/features/ingressos/lotes-section";
 import {
   addInscricao,
   getEventoDetalhe,
@@ -51,7 +52,8 @@ import {
   removeInscricao,
   updateInscricao,
 } from "@/db/repos/eventos";
-import { formatDate } from "@/lib/format";
+import { resumoVendas } from "@/db/repos/ingressos";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { INSCRICAO_STATUS, PAGAMENTO_STATUS, inscricaoStatusLabel } from "./evento-schema";
 
 export function EventoDetailSheet({
@@ -73,6 +75,10 @@ export function EventoDetailSheet({
   );
   const disponiveis = useLiveQuery(
     () => (eventoId ? listPessoasDisponiveis(eventoId) : Promise.resolve([])),
+    [eventoId],
+  );
+  const vendas = useLiveQuery(
+    () => (eventoId ? resumoVendas(eventoId) : Promise.resolve(null)),
     [eventoId],
   );
 
@@ -159,6 +165,21 @@ export function EventoDetailSheet({
                 </span>
                 {cheio ? <Badge variant="destructive">Lotado</Badge> : null}
               </div>
+
+              {vendas && vendas.ingressosVendidos > 0 ? (
+                <div className="rounded-lg border border-green-600/30 bg-green-500/5 p-2.5 text-sm">
+                  <p className="font-medium text-green-700 dark:text-green-500">
+                    {vendas.ingressosVendidos} ingresso(s) vendido(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Receita: {formatCurrency(vendas.receita)} · {vendas.pedidosPagos} pedido(s) pago(s)
+                  </p>
+                </div>
+              ) : null}
+
+              <Separator />
+
+              <LotesSection eventoId={detalhe.evento.id} />
 
               <Separator />
 

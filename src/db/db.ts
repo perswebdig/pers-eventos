@@ -90,10 +90,8 @@ export class PersEventosDB extends Dexie {
         "id, tenant_id, status, data_inicio, updated_at, sync_status, [tenant_id+updated_at], [sync_status+updated_at]",
       inscricoes:
         "id, tenant_id, pessoa_id, evento_id, status, updated_at, sync_status, [evento_id+status], [tenant_id+updated_at], [sync_status+updated_at]",
-      documentos:
-        "id, tenant_id, pessoa_id, tipo, uploaded_at, updated_at, sync_status",
-      termos:
-        "id, tenant_id, pessoa_id, evento_id, tipo, aceito_em, updated_at, sync_status",
+      documentos: "id, tenant_id, pessoa_id, tipo, uploaded_at, updated_at, sync_status",
+      termos: "id, tenant_id, pessoa_id, evento_id, tipo, aceito_em, updated_at, sync_status",
       arquivos: "id, pessoa_id, uploaded, created_at",
       log_acesso_dados: "++id, tenant_id, user_id, pessoa_id, acao, criado_em",
       ticket_types:

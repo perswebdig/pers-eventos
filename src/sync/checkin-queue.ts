@@ -34,9 +34,9 @@ export async function flushCheckinQueue(): Promise<FlushCheckinResult | null> {
 
   if (!res.ok) return null;
 
-  const body = (await res.json().catch(() => null)) as
-    | { data?: { processed?: number; already?: number; not_found?: string[] } }
-    | null;
+  const body = (await res.json().catch(() => null)) as {
+    data?: { processed?: number; already?: number; not_found?: string[] };
+  } | null;
 
   // Sucesso: limpa a fila enviada e marca os ingressos como sincronizados.
   for (const item of itens) {

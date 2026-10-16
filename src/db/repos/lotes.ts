@@ -65,7 +65,9 @@ export async function removeLote(id: string): Promise<void> {
   const atual = await db.ticket_types.get(id);
   if (!atual) return;
   if (atual.quantity_sold > 0) {
-    throw new Error(`Este lote já vendeu ${atual.quantity_sold} ingresso(s) e não pode ser excluído.`);
+    throw new Error(
+      `Este lote já vendeu ${atual.quantity_sold} ingresso(s) e não pode ser excluído.`,
+    );
   }
   await deleteLocal(db, "ticket_types", id);
 }

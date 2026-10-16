@@ -30,7 +30,10 @@ const quantidade = z
   .transform((v, ctx) => {
     const n = typeof v === "number" ? v : Number(String(v).trim());
     if (!Number.isInteger(n) || n < 1 || n > 100000) {
-      ctx.addIssue({ code: "custom", message: "Quantidade deve ser um inteiro entre 1 e 100.000." });
+      ctx.addIssue({
+        code: "custom",
+        message: "Quantidade deve ser um inteiro entre 1 e 100.000.",
+      });
       return z.NEVER;
     }
     return n;
