@@ -16,17 +16,17 @@ sítios, fazendas, centros de terapia).
 
 ## Status
 
-| Passo | Módulo                        | Situação |
-| ----- | ----------------------------- | -------- |
-| 1     | Setup do projeto + PWA        | ✅ concluído |
-| 2     | Schema Supabase + Dexie       | ✅ concluído |
-| 3     | Sync engine                   | ✅ concluído |
-| 4     | Cadastro de pessoas (offline) | ✅ concluído |
-| 5     | Eventos + inscrições          | ✅ concluído |
-| 6     | Check-in por QR               | ✅ concluído |
-| 7     | Termos + LGPD                 | ✅ concluído |
-| 8     | Relatórios                    | ✅ concluído |
-| 9     | Polimento UX                  | ✅ concluído |
+| Passo | Módulo                           | Situação     |
+| ----- | -------------------------------- | ------------ |
+| 1     | Setup do projeto + PWA           | ✅ concluído |
+| 2     | Schema Supabase + Dexie          | ✅ concluído |
+| 3     | Sync engine                      | ✅ concluído |
+| 4     | Cadastro de pessoas (offline)    | ✅ concluído |
+| 5     | Eventos + inscrições             | ✅ concluído |
+| 6     | Check-in por QR                  | ✅ concluído |
+| 7     | Termos + LGPD                    | ✅ concluído |
+| 8     | Relatórios                       | ✅ concluído |
+| 9     | Polimento UX                     | ✅ concluído |
 | 10    | Multitenant + 3 níveis de acesso | ✅ concluído |
 | 11    | Deploy PM2/Docker (background)   | ✅ concluído |
 
@@ -163,7 +163,7 @@ infrastructure/             # (nginx etc.)
 
 ## Conectar ao Supabase (ativar o sync real)
 
-Sem Supabase o app roda **só offline** (o chip de sync fica *Pendente*). Para a
+Sem Supabase o app roda **só offline** (o chip de sync fica _Pendente_). Para a
 sincronização funcionar de verdade, siga os passos:
 
 ### 1. Criar o projeto
@@ -227,21 +227,21 @@ precisa clicar no link enviado por e-mail antes do primeiro login.)
 
 ## Scripts
 
-| Comando             | Descrição                                  |
-| ------------------- | ------------------------------------------ |
-| `npm run dev`       | Servidor de desenvolvimento                |
-| `npm run build`     | Build de produção (gera o service worker)  |
-| `npm run start`     | Serve o build de produção                  |
-| `npm run lint`      | ESLint                                     |
-| `npm run typecheck` | TypeScript (`tsc --noEmit`)                |
-| `npm run icons`     | Regenera os ícones do PWA em `public/icons`|
-| `npm run db:verify` | Smoke test das migrations do Dexie (Node + fake-indexeddb) |
-| `npm run sync:verify` | Testa o sync engine offline (push, pull, conflito, deletes) |
-| `npm run pessoas:verify` | Testa CPF, schema e o repositório de pessoas (offline) |
-| `npm run eventos:verify` | Testa schema e o repositório de eventos/inscrições (offline) |
-| `npm run checkin:verify` | Testa QR encode/decode e o fluxo check-in/check-out (offline) |
-| `npm run relatorios:verify` | Testa resumos, export CSV e gráfico de check-ins (offline) |
-| `npm run termos:verify` | *(desabilitado)* conflito de schema cache no fake-indexeddb; testado via check-in |
+| Comando                     | Descrição                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `npm run dev`               | Servidor de desenvolvimento                                                       |
+| `npm run build`             | Build de produção (gera o service worker)                                         |
+| `npm run start`             | Serve o build de produção                                                         |
+| `npm run lint`              | ESLint                                                                            |
+| `npm run typecheck`         | TypeScript (`tsc --noEmit`)                                                       |
+| `npm run icons`             | Regenera os ícones do PWA em `public/icons`                                       |
+| `npm run db:verify`         | Smoke test das migrations do Dexie (Node + fake-indexeddb)                        |
+| `npm run sync:verify`       | Testa o sync engine offline (push, pull, conflito, deletes)                       |
+| `npm run pessoas:verify`    | Testa CPF, schema e o repositório de pessoas (offline)                            |
+| `npm run eventos:verify`    | Testa schema e o repositório de eventos/inscrições (offline)                      |
+| `npm run checkin:verify`    | Testa QR encode/decode e o fluxo check-in/check-out (offline)                     |
+| `npm run relatorios:verify` | Testa resumos, export CSV e gráfico de check-ins (offline)                        |
+| `npm run termos:verify`     | _(desabilitado)_ conflito de schema cache no fake-indexeddb; testado via check-in |
 
 ## Banco de dados
 
@@ -384,9 +384,9 @@ Tela de recepção em `/checkin` totalmente offline:
 - **Busca manual**: campo de texto aceita o payload do QR (`PERS1:<uuid>`), o UUID puro ou o nome do participante (busca em tempo real no IndexedDB).
 - **Filtro por evento**: opcional, restringe a busca manual.
 - **Ações**: ao selecionar uma inscrição, exibe cartão com dados da pessoa, evento, status atual e botões:
-  - *Check-in* (quando `inscrito`/`confirmado`/`cancelado`);
-  - *Check-out* (quando `checkin`);
-  - *Nova entrada* (quando `checkout` — gera novo horário de check-in).
+  - _Check-in_ (quando `inscrito`/`confirmado`/`cancelado`);
+  - _Check-out_ (quando `checkin`);
+  - _Nova entrada_ (quando `checkout` — gera novo horário de check-in).
 - **Gerador de QR** (na parte inferior): cola o UUID da inscrição e gera o QR para impressão/teste.
 - **Reuso**: o QR também aparece no detalhe do evento (`evento-detail.tsx`) — botão de QR ao lado de cada inscrito.
 
@@ -424,12 +424,12 @@ O sistema é multitenant: cada **estabelecimento** é um tenant e todos os dados
 domínio (pessoas, eventos, inscrições, documentos, termos, logs) carregam
 `tenant_id`, com RLS aplicando o isolamento. Há três níveis de acesso:
 
-| Papel (`profiles.papel`) | AppRole | Rotas | Pode |
-| ------------------------ | ------- | ----- | ---- |
-| `super_admin`            | super_admin | `/admin/**` | CRUD de estabelecimentos, métricas globais, criar admins |
-| `tenant_admin` / `admin` | tenant_admin | `/dashboard`, `/pessoas`, `/eventos`, `/checkin`, `/termos`, `/relatorios` | Tudo do tenant |
-| `staff` / `recepcao`     | staff | `/dashboard`, `/pessoas`, `/eventos`, `/checkin`, `/termos` | Operação (sem relatórios) |
-| `cliente`                | cliente | `/portal/**` | Cadastro, inscrição, QR Code, termos |
+| Papel (`profiles.papel`) | AppRole      | Rotas                                                                      | Pode                                                     |
+| ------------------------ | ------------ | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `super_admin`            | super_admin  | `/admin/**`                                                                | CRUD de estabelecimentos, métricas globais, criar admins |
+| `tenant_admin` / `admin` | tenant_admin | `/dashboard`, `/pessoas`, `/eventos`, `/checkin`, `/termos`, `/relatorios` | Tudo do tenant                                           |
+| `staff` / `recepcao`     | staff        | `/dashboard`, `/pessoas`, `/eventos`, `/checkin`, `/termos`                | Operação (sem relatórios)                                |
+| `cliente`                | cliente      | `/portal/**`                                                               | Cadastro, inscrição, QR Code, termos                     |
 
 - O **middleware** (`src/lib/supabase/middleware.ts`) renova a sessão e aplica o
   RBAC por prefixo de rota (`src/lib/auth/roles.ts`). Sessão/perfil no servidor
@@ -454,12 +454,12 @@ painel. Sem elas o app roda apenas offline (Dexie).
 
 Copie `.env.example` para `.env.local` (dev) ou `.env` (produção):
 
-| Variável | Uso |
-| -------- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto (público) |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (aceita ambas) |
-| `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | Chave secreta server-side (Admin API: criar usuários) |
-| `PORT` | Porta do app (padrão `3010`) |
+| Variável                                                                 | Uso                                                   |
+| ------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                                               | URL do projeto (público)                              |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (aceita ambas)                          |
+| `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`                      | Chave secreta server-side (Admin API: criar usuários) |
+| `PORT`                                                                   | Porta do app (padrão `3010`)                          |
 
 ## Deploy na Vercel (recomendado)
 
@@ -474,7 +474,7 @@ O sistema é 100% serverless (Next.js API Routes + Supabase) — não requer ser
    de Postgres no projeto.
 3. Em **Project → Settings → Environment Variables**, adicione a variável de
    servidor (não exposta ao browser):
-   - `SUPABASE_SECRET_KEY` (ou `SUPABASE_SERVICE_ROLE_KEY`) — chave *service role*
+   - `SUPABASE_SECRET_KEY` (ou `SUPABASE_SERVICE_ROLE_KEY`) — chave _service role_
      do Supabase, necessária para criar usuários via Admin API.
 4. Para conexões Postgres serverless (se usar Prisma/ORM direto), use o
    **Transaction Pooler** do Supabase (porta **6543**).
@@ -485,11 +485,11 @@ O sistema é 100% serverless (Next.js API Routes + Supabase) — não requer ser
 No painel da Vercel (**Project → Settings → Environment Variables**), defina
 para **Production**, **Preview** e **Development**:
 
-| Variável | Obrigatória | Onde obter |
-| -------- | ----------- | ---------- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Sim | Supabase → Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sim | Supabase → Settings → API → anon/public key |
-| `SUPABASE_SECRET_KEY` (service role) | Sim* | Supabase → Settings → API → service_role secret |
+| Variável                                                                  | Obrigatória | Onde obter                                      |
+| ------------------------------------------------------------------------- | ----------- | ----------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                                                | Sim         | Supabase → Settings → API → Project URL         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sim         | Supabase → Settings → API → anon/public key     |
+| `SUPABASE_SECRET_KEY` (service role)                                      | Sim*        | Supabase → Settings → API → service_role secret |
 
 \* Necessária para `/api/usuarios` (criar usuários) e Admin API.
 
@@ -499,6 +499,7 @@ para **Production**, **Preview** e **Development**:
 ### vercel.json
 
 O arquivo `vercel.json` na raiz configura:
+
 - Headers de segurança (CSP básico, X-Frame-Options, etc.)
 - Cache estático para manifest e ícones PWA
 - Tempo máximo de execução das API Routes (30s)

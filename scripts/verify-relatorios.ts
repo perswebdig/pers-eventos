@@ -26,35 +26,69 @@ function pessoa(nome: string, opts: { cpf?: boolean; menor?: boolean; lgpd?: boo
     id: crypto.randomUUID(),
     nome_completo: nome,
     cpf: opts.cpf ? "12345678901" : null,
-    rg: null, data_nascimento: opts.menor ? "2015-01-01" : "1990-01-01", telefone: null,
-    email: null, endereco: null, contato_emergencia_nome: null, contato_emergencia_telefone: null,
-    restricoes_alimentares: null, condicoes_saude: null, medicacoes: null, observacoes: null,
-    consentimento_lgpd: opts.lgpd ?? true, created_at: ts, updated_at: ts, sync_status: "synced" as const,
+    rg: null,
+    data_nascimento: opts.menor ? "2015-01-01" : "1990-01-01",
+    telefone: null,
+    email: null,
+    endereco: null,
+    contato_emergencia_nome: null,
+    contato_emergencia_telefone: null,
+    restricoes_alimentares: null,
+    condicoes_saude: null,
+    medicacoes: null,
+    observacoes: null,
+    consentimento_lgpd: opts.lgpd ?? true,
+    created_at: ts,
+    updated_at: ts,
+    sync_status: "synced" as const,
   };
 }
 
 function evento(nome: string, capacidade = 10, status = "planejado") {
   const ts = new Date().toISOString();
   return {
-    id: crypto.randomUUID(), nome, descricao: null, data_inicio: "2026-07-01", data_fim: null,
-    local: "Local", capacidade, status, created_at: ts, updated_at: ts, sync_status: "synced" as const,
+    id: crypto.randomUUID(),
+    nome,
+    descricao: null,
+    data_inicio: "2026-07-01",
+    data_fim: null,
+    local: "Local",
+    capacidade,
+    status,
+    created_at: ts,
+    updated_at: ts,
+    sync_status: "synced" as const,
   };
 }
 
 function inscricao(pessoaId: string, eventoId: string, status = "inscrito") {
   const ts = new Date().toISOString();
   return {
-    id: crypto.randomUUID(), pessoa_id: pessoaId, evento_id: eventoId, status,
+    id: crypto.randomUUID(),
+    pessoa_id: pessoaId,
+    evento_id: eventoId,
+    status,
     data_checkin: status === "checkin" || status === "checkout" ? new Date().toISOString() : null,
     data_checkout: status === "checkout" ? new Date().toISOString() : null,
-    pagamento_status: "pendente", valor: 100, forma_pagamento: null, termo_assinado: false,
-    created_at: ts, updated_at: ts, sync_status: "synced" as const,
+    pagamento_status: "pendente",
+    valor: 100,
+    forma_pagamento: null,
+    termo_assinado: false,
+    created_at: ts,
+    updated_at: ts,
+    sync_status: "synced" as const,
   };
 }
 
 async function main() {
   console.log("== toCSV helper ==");
-  assert(toCSV([{ a: 1, b: "x" }, { a: 2, b: "y" }]).split("\n").length === 3, "header + 2 rows");
+  assert(
+    toCSV([
+      { a: 1, b: "x" },
+      { a: 2, b: "y" },
+    ]).split("\n").length === 3,
+    "header + 2 rows",
+  );
   assert(toCSV([{ a: 'com"virgula', b: 1 }]).includes('"com""virgula"'), "escapa aspas");
   assert(toCSV([]) === "", "array vazio");
 
@@ -67,8 +101,14 @@ async function main() {
   const p3 = pessoa("Carlos", { cpf: true, lgpd: false });
   await db.pessoas.bulkPut([p1, p2, p3]);
   await db.menores.put({
-    id: crypto.randomUUID(), pessoa_id: p2.id, responsavel_nome: "Responsável", responsavel_cpf: "12345678901",
-    autorizacao_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), sync_status: "synced",
+    id: crypto.randomUUID(),
+    pessoa_id: p2.id,
+    responsavel_nome: "Responsável",
+    responsavel_cpf: "12345678901",
+    autorizacao_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    sync_status: "synced",
   });
 
   const e1 = evento("Evento A", 20, "aberto");
@@ -83,20 +123,52 @@ async function main() {
   ]);
 
   await db.termos.put({
-    id: crypto.randomUUID(), pessoa_id: p1.id, evento_id: e1.id, tipo: "responsabilidade",
-    aceito_em: new Date().toISOString(), ip: null, assinatura_url: null,
-    created_at: new Date().toISOString(), updated_at: new Date().toISOString(), sync_status: "synced",
+    id: crypto.randomUUID(),
+    pessoa_id: p1.id,
+    evento_id: e1.id,
+    tipo: "responsabilidade",
+    aceito_em: new Date().toISOString(),
+    ip: null,
+    assinatura_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    sync_status: "synced",
   });
   await db.termos.put({
-    id: crypto.randomUUID(), pessoa_id: p2.id, evento_id: null, tipo: "imagem",
-    aceito_em: new Date().toISOString(), ip: null, assinatura_url: null,
-    created_at: new Date().toISOString(), updated_at: new Date().toISOString(), sync_status: "synced",
+    id: crypto.randomUUID(),
+    pessoa_id: p2.id,
+    evento_id: null,
+    tipo: "imagem",
+    aceito_em: new Date().toISOString(),
+    ip: null,
+    assinatura_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    sync_status: "synced",
   });
 
   await db.log_acesso_dados.bulkAdd([
-    { user_id: "u1", pessoa_id: p1.id, acao: "visualizou_assinatura", criado_em: new Date().toISOString(), sync_status: "synced" },
-    { user_id: "u1", pessoa_id: p1.id, acao: "visualizou_assinatura", criado_em: new Date().toISOString(), sync_status: "synced" },
-    { user_id: "u2", pessoa_id: p2.id, acao: "baixou_assinatura", criado_em: new Date().toISOString(), sync_status: "synced" },
+    {
+      user_id: "u1",
+      pessoa_id: p1.id,
+      acao: "visualizou_assinatura",
+      criado_em: new Date().toISOString(),
+      sync_status: "synced",
+    },
+    {
+      user_id: "u1",
+      pessoa_id: p1.id,
+      acao: "visualizou_assinatura",
+      criado_em: new Date().toISOString(),
+      sync_status: "synced",
+    },
+    {
+      user_id: "u2",
+      pessoa_id: p2.id,
+      acao: "baixou_assinatura",
+      criado_em: new Date().toISOString(),
+      sync_status: "synced",
+    },
   ]);
 
   // A) Resumos

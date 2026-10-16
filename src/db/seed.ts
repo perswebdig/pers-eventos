@@ -105,7 +105,18 @@ export async function seedLocalDatabase(force = false): Promise<number> {
 export async function clearLocalDatabase(): Promise<void> {
   await db.transaction(
     "rw",
-    [db.pessoas, db.menores, db.eventos, db.inscricoes, db.documentos, db.termos, db.arquivos, db.sync_queue, db.sync_cursor, db.meta],
+    [
+      db.pessoas,
+      db.menores,
+      db.eventos,
+      db.inscricoes,
+      db.documentos,
+      db.termos,
+      db.arquivos,
+      db.sync_queue,
+      db.sync_cursor,
+      db.meta,
+    ],
     async () => {
       await Promise.all([
         db.pessoas.clear(),

@@ -10,9 +10,7 @@ export default function Home() {
         <Leaf className="size-8" aria-hidden />
       </div>
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {APP_NAME}
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{APP_NAME}</h1>
         <p className="text-balance text-muted-foreground">{APP_DESCRIPTION}</p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">

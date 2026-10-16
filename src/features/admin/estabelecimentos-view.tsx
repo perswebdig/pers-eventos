@@ -113,10 +113,7 @@ export function EstabelecimentosView() {
     }
   }
 
-  const emptyValues = useMemo(
-    () => toEstabelecimentoFormValues({}),
-    [],
-  );
+  const emptyValues = useMemo(() => toEstabelecimentoFormValues({}), []);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -124,9 +121,7 @@ export function EstabelecimentosView() {
         <div>
           <h1 className="text-xl font-semibold">Estabelecimentos</h1>
           <p className="text-sm text-muted-foreground">
-            {itens === null
-              ? "Carregando…"
-              : `${itens.length} estabelecimento(s)`}
+            {itens === null ? "Carregando…" : `${itens.length} estabelecimento(s)`}
           </p>
         </div>
         <Button
@@ -240,18 +235,12 @@ export function EstabelecimentosView() {
       >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>
-              {editing ? "Editar estabelecimento" : "Novo estabelecimento"}
-            </DialogTitle>
-            <DialogDescription>
-              Dados do tenant (estabelecimento) da plataforma.
-            </DialogDescription>
+            <DialogTitle>{editing ? "Editar estabelecimento" : "Novo estabelecimento"}</DialogTitle>
+            <DialogDescription>Dados do tenant (estabelecimento) da plataforma.</DialogDescription>
           </DialogHeader>
           <EstabelecimentoForm
             key={editing?.id ?? "novo"}
-            defaultValues={
-              editing ? toEstabelecimentoFormValues(editing) : emptyValues
-            }
+            defaultValues={editing ? toEstabelecimentoFormValues(editing) : emptyValues}
             onSubmit={handleSubmit}
             onCancel={() => setFormOpen(false)}
           />
@@ -268,8 +257,8 @@ export function EstabelecimentosView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir estabelecimento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação remove o estabelecimento e, por cascata, todos os eventos,
-              pessoas e registros vinculados. Não pode ser desfeita.
+              Esta ação remove o estabelecimento e, por cascata, todos os eventos, pessoas e
+              registros vinculados. Não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

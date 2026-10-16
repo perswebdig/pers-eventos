@@ -13,17 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 import { wipeLocalDatabase } from "@/db/tenant";
 import { ROLE_LABEL, type AppRole } from "@/lib/auth/roles";
 
-export function UserMenu({
-  email,
-  role = "staff",
-}: {
-  email: string | null;
-  role?: AppRole;
-}) {
+export function UserMenu({ email, role = "staff" }: { email: string | null; role?: AppRole }) {
   const router = useRouter();
   const [saindo, setSaindo] = useState(false);
 
@@ -66,16 +60,10 @@ export function UserMenu({
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
           <span className="truncate text-sm font-medium">{email}</span>
-          <span className="text-xs font-normal text-muted-foreground">
-            {ROLE_LABEL[role]}
-          </span>
+          <span className="text-xs font-normal text-muted-foreground">{ROLE_LABEL[role]}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={saindo}
-          onClick={handleSignOut}
-        >
+        <DropdownMenuItem variant="destructive" disabled={saindo} onClick={handleSignOut}>
           <LogOut className="size-4" />
           {saindo ? "Saindo…" : "Sair"}
         </DropdownMenuItem>

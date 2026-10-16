@@ -113,11 +113,7 @@ export function PortalEventos() {
                     Inscrito
                   </Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    disabled={enviando === e.id}
-                    onClick={() => inscrever(e.id)}
-                  >
+                  <Button size="sm" disabled={enviando === e.id} onClick={() => inscrever(e.id)}>
                     Inscrever-se
                   </Button>
                 )}

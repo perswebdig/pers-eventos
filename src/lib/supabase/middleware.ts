@@ -1,17 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database, Profile } from "@/types/database";
-import {
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-  isSupabaseConfigured,
-} from "@/lib/env";
-import {
-  canAccessPath,
-  homePathForRole,
-  normalizeRole,
-  ruleForPath,
-} from "@/lib/auth/roles";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
+import { canAccessPath, homePathForRole, normalizeRole, ruleForPath } from "@/lib/auth/roles";
 
 // Rotas que não devem ser acessadas quando já autenticado.
 const AUTH_PREFIXES = ["/login", "/onboarding"];
@@ -35,9 +26,7 @@ export async function updateSession(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value),
-        );
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),

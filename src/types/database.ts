@@ -2,33 +2,16 @@
 //   supabase gen types typescript --project-id <id> > src/types/database.ts
 // Por enquanto, refletem o modelo de dados alvo (passo 2 + migrations).
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type SyncStatus = "synced" | "pending" | "conflict" | "error";
 
 // Papéis do sistema. `super_admin` é global (dono da PersEventos); `tenant_admin`
 // e `recepcao`/`staff` atuam dentro de um estabelecimento; `cliente` é o usuário
 // final. `admin` é o papel legado equivalente a `tenant_admin`.
-export type Papel =
-  | "super_admin"
-  | "tenant_admin"
-  | "admin"
-  | "staff"
-  | "recepcao"
-  | "cliente";
+export type Papel = "super_admin" | "tenant_admin" | "admin" | "staff" | "recepcao" | "cliente";
 
-export type InscricaoStatus =
-  | "inscrito"
-  | "confirmado"
-  | "checkin"
-  | "checkout"
-  | "cancelado";
+export type InscricaoStatus = "inscrito" | "confirmado" | "checkin" | "checkout" | "cancelado";
 
 export type PagamentoStatus = "pendente" | "pago" | "isento" | "reembolsado";
 
@@ -72,7 +55,7 @@ export type Pessoa = {
   consentimento_lgpd: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type Menor = {
   id: string;
@@ -83,7 +66,7 @@ export type Menor = {
   autorizacao_url: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type Evento = {
   id: string;
@@ -97,7 +80,7 @@ export type Evento = {
   status: string;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type Inscricao = {
   id: string;
@@ -113,7 +96,7 @@ export type Inscricao = {
   termo_assinado: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type Documento = {
   id: string;
@@ -123,7 +106,7 @@ export type Documento = {
   url: string;
   uploaded_at: string;
   updated_at: string;
-}
+};
 
 export type Termo = {
   id: string;
@@ -136,7 +119,7 @@ export type Termo = {
   assinatura_url: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type LogAcessoDados = {
   id: number;
@@ -145,7 +128,7 @@ export type LogAcessoDados = {
   pessoa_id: string | null;
   acao: string;
   criado_em: string;
-}
+};
 
 export type Profile = {
   id: string;
@@ -157,7 +140,7 @@ export type Profile = {
   ativo: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
 // Relação (FK) no formato esperado pelo supabase-js para embeds/RPC tipados.
 export type Relationship = {
@@ -169,12 +152,7 @@ export type Relationship = {
 };
 
 // `Relationships` é obrigatório para o supabase-js reconhecer a tabela.
-type Table<
-  Row,
-  Insert = Partial<Row>,
-  Update = Partial<Row>,
-  Rels extends Relationship[] = [],
-> = {
+type Table<Row, Insert = Partial<Row>, Update = Partial<Row>, Rels extends Relationship[] = []> = {
   Row: Row;
   Insert: Insert;
   Update: Update;
@@ -193,14 +171,62 @@ export interface Database {
   public: {
     Tables: {
       estabelecimentos: Table<Estabelecimento>;
-      pessoas: Table<Pessoa, Partial<Pessoa>, Partial<Pessoa>, [Rel<"tenant_id", "estabelecimentos">]>;
-      menores: Table<Menor, Partial<Menor>, Partial<Menor>, [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]>;
-      eventos: Table<Evento, Partial<Evento>, Partial<Evento>, [Rel<"tenant_id", "estabelecimentos">]>;
-      inscricoes: Table<Inscricao, Partial<Inscricao>, Partial<Inscricao>, [Rel<"pessoa_id", "pessoas">, Rel<"evento_id", "eventos">, Rel<"tenant_id", "estabelecimentos">]>;
-      documentos: Table<Documento, Partial<Documento>, Partial<Documento>, [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]>;
-      termos: Table<Termo, Partial<Termo>, Partial<Termo>, [Rel<"pessoa_id", "pessoas">, Rel<"evento_id", "eventos">, Rel<"tenant_id", "estabelecimentos">]>;
-      log_acesso_dados: Table<LogAcessoDados, Partial<LogAcessoDados>, Partial<LogAcessoDados>, [Rel<"tenant_id", "estabelecimentos">]>;
-      profiles: Table<Profile, Partial<Profile>, Partial<Profile>, [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]>;
+      pessoas: Table<
+        Pessoa,
+        Partial<Pessoa>,
+        Partial<Pessoa>,
+        [Rel<"tenant_id", "estabelecimentos">]
+      >;
+      menores: Table<
+        Menor,
+        Partial<Menor>,
+        Partial<Menor>,
+        [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]
+      >;
+      eventos: Table<
+        Evento,
+        Partial<Evento>,
+        Partial<Evento>,
+        [Rel<"tenant_id", "estabelecimentos">]
+      >;
+      inscricoes: Table<
+        Inscricao,
+        Partial<Inscricao>,
+        Partial<Inscricao>,
+        [
+          Rel<"pessoa_id", "pessoas">,
+          Rel<"evento_id", "eventos">,
+          Rel<"tenant_id", "estabelecimentos">,
+        ]
+      >;
+      documentos: Table<
+        Documento,
+        Partial<Documento>,
+        Partial<Documento>,
+        [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]
+      >;
+      termos: Table<
+        Termo,
+        Partial<Termo>,
+        Partial<Termo>,
+        [
+          Rel<"pessoa_id", "pessoas">,
+          Rel<"evento_id", "eventos">,
+          Rel<"tenant_id", "estabelecimentos">,
+        ]
+      >;
+      log_acesso_dados: Table<
+        LogAcessoDados,
+        Partial<LogAcessoDados>,
+        Partial<LogAcessoDados>,
+        [Rel<"tenant_id", "estabelecimentos">]
+      >;
+      profiles: Table<
+        Profile,
+        Partial<Profile>,
+        Partial<Profile>,
+        [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]
+      >;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

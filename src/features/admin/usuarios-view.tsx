@@ -219,11 +219,15 @@ export function UsuariosView() {
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                            {u.nome?.slice(0, 1).toUpperCase() ?? u.email?.slice(0, 1).toUpperCase() ?? "?"}
+                            {u.nome?.slice(0, 1).toUpperCase() ??
+                              u.email?.slice(0, 1).toUpperCase() ??
+                              "?"}
                           </div>
                           <div>
                             <p className="font-medium">{u.nome ?? "—"}</p>
-                            <p className="text-xs text-muted-foreground truncate max-w-xs">{u.email}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-xs">
+                              {u.email}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -239,7 +243,14 @@ export function UsuariosView() {
                         </Badge>
                       </td>
                       <td className="p-3">
-                        <Badge variant="outline" className={u.ativo ? "border-green-600/30 text-green-700 dark:text-green-500" : "border-muted-foreground/30 text-muted-foreground"}>
+                        <Badge
+                          variant="outline"
+                          className={
+                            u.ativo
+                              ? "border-green-600/30 text-green-700 dark:text-green-500"
+                              : "border-muted-foreground/30 text-muted-foreground"
+                          }
+                        >
                           {u.ativo ? "Ativo" : "Inativo"}
                         </Badge>
                       </td>
@@ -344,7 +355,13 @@ function UsuarioForm({
   salvando,
 }: {
   editing: Usuario | null;
-  onSubmit: (values: { nome: string; email: string; password: string; papel: "tenant_admin" | "staff" | "cliente"; pessoa_id?: string }) => Promise<void>;
+  onSubmit: (values: {
+    nome: string;
+    email: string;
+    password: string;
+    papel: "tenant_admin" | "staff" | "cliente";
+    pessoa_id?: string;
+  }) => Promise<void>;
   onCancel: () => void;
   salvando: boolean;
 }) {
@@ -387,19 +404,43 @@ function UsuarioForm({
     <form onSubmit={handleSubmitForm} className="grid gap-4">
       <div className="grid gap-1.5">
         <Label htmlFor="usuario_nome">Nome *</Label>
-        <Input id="usuario_nome" value={values.nome} onChange={(e) => setValues({ ...values, nome: e.target.value })} autoComplete="name" disabled={!!editing} />
+        <Input
+          id="usuario_nome"
+          value={values.nome}
+          onChange={(e) => setValues({ ...values, nome: e.target.value })}
+          autoComplete="name"
+          disabled={!!editing}
+        />
       </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="usuario_email">E-mail *</Label>
-        <Input id="usuario_email" type="email" inputMode="email" value={values.email} onChange={(e) => setValues({ ...values, email: e.target.value })} autoComplete="email" disabled={!!editing} />
+        <Input
+          id="usuario_email"
+          type="email"
+          inputMode="email"
+          value={values.email}
+          onChange={(e) => setValues({ ...values, email: e.target.value })}
+          autoComplete="email"
+          disabled={!!editing}
+        />
       </div>
 
       {!editing && (
         <div className="grid gap-1.5">
           <Label htmlFor="usuario_password">Senha inicial *</Label>
-          <Input id="usuario_password" type="password" value={values.password} onChange={(e) => setValues({ ...values, password: e.target.value })} autoComplete="new-password" minLength={6} placeholder="Mínimo 6 caracteres" />
-          <p className="text-xs text-muted-foreground">O usuário poderá alterar no primeiro acesso.</p>
+          <Input
+            id="usuario_password"
+            type="password"
+            value={values.password}
+            onChange={(e) => setValues({ ...values, password: e.target.value })}
+            autoComplete="new-password"
+            minLength={6}
+            placeholder="Mínimo 6 caracteres"
+          />
+          <p className="text-xs text-muted-foreground">
+            O usuário poderá alterar no primeiro acesso.
+          </p>
         </div>
       )}
 
@@ -408,11 +449,15 @@ function UsuarioForm({
         <select
           id="usuario_papel"
           value={values.papel}
-          onChange={(e) => setValues({ ...values, papel: e.target.value as "tenant_admin" | "staff" | "cliente" })}
+          onChange={(e) =>
+            setValues({ ...values, papel: e.target.value as "tenant_admin" | "staff" | "cliente" })
+          }
           className="rounded-md border bg-background px-3 py-2 text-sm"
         >
           {PAPEL_OPCOES.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
           ))}
         </select>
       </div>

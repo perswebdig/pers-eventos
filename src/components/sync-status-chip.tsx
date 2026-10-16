@@ -12,7 +12,11 @@ export function SyncStatusChip() {
   const pendingCount = useSyncStore((s) => s.pendingCount);
   const lastError = useSyncStore((s) => s.lastError);
 
-  const { icon: Icon, label, tone } = (() => {
+  const {
+    icon: Icon,
+    label,
+    tone,
+  } = (() => {
     if (!online) {
       return { icon: CloudOff, label: "Offline", tone: "text-muted-foreground" };
     }

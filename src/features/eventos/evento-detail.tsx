@@ -52,11 +52,7 @@ import {
   updateInscricao,
 } from "@/db/repos/eventos";
 import { formatDate } from "@/lib/format";
-import {
-  INSCRICAO_STATUS,
-  PAGAMENTO_STATUS,
-  inscricaoStatusLabel,
-} from "./evento-schema";
+import { INSCRICAO_STATUS, PAGAMENTO_STATUS, inscricaoStatusLabel } from "./evento-schema";
 
 export function EventoDetailSheet({
   eventoId,
@@ -139,9 +135,7 @@ export function EventoDetailSheet({
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="size-3.5" />
                   {formatDate(detalhe.evento.data_inicio)}
-                  {detalhe.evento.data_fim
-                    ? ` – ${formatDate(detalhe.evento.data_fim)}`
-                    : ""}
+                  {detalhe.evento.data_fim ? ` – ${formatDate(detalhe.evento.data_fim)}` : ""}
                 </span>
                 {detalhe.evento.local ? (
                   <span className="inline-flex items-center gap-1">
@@ -176,10 +170,7 @@ export function EventoDetailSheet({
               ) : (
                 <ul className="space-y-2">
                   {detalhe.inscritos.map(({ inscricao, pessoa }) => (
-                    <li
-                      key={inscricao.id}
-                      className="rounded-lg border p-2.5"
-                    >
+                    <li key={inscricao.id} className="rounded-lg border p-2.5">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">
@@ -229,9 +220,7 @@ export function EventoDetailSheet({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Badge variant="outline">
-                          {inscricaoStatusLabel(inscricao.status)}
-                        </Badge>
+                        <Badge variant="outline">{inscricaoStatusLabel(inscricao.status)}</Badge>
                       </div>
                     </li>
                   ))}
@@ -248,10 +237,7 @@ export function EventoDetailSheet({
                   <div className="grid gap-3">
                     <div className="grid gap-1.5">
                       <Label htmlFor="nova_pessoa">Pessoa</Label>
-                      <Select
-                        value={novaPessoa}
-                        onValueChange={(v) => setNovaPessoa(v as string)}
-                      >
+                      <Select value={novaPessoa} onValueChange={(v) => setNovaPessoa(v as string)}>
                         <SelectTrigger id="nova_pessoa" className="w-full">
                           <SelectValue placeholder="Selecione…" />
                         </SelectTrigger>
@@ -358,8 +344,8 @@ export function EventoDetailSheet({
           <AlertDialogHeader>
             <AlertDialogTitle>Remover inscrição?</AlertDialogTitle>
             <AlertDialogDescription>
-              A inscrição será removida deste evento (localmente e no servidor quando
-              houver conexão).
+              A inscrição será removida deste evento (localmente e no servidor quando houver
+              conexão).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -381,7 +367,9 @@ export function EventoDetailSheet({
             <div className="bg-white p-4 rounded-lg shadow">
               <QRCodeSVG value={encodeInscricaoQr(qrInscId!)} size={200} />
             </div>
-            <p className="text-xs text-muted-foreground font-mono">{encodeInscricaoQr(qrInscId!)}</p>
+            <p className="text-xs text-muted-foreground font-mono">
+              {encodeInscricaoQr(qrInscId!)}
+            </p>
             <Button variant="outline" onClick={() => setQrInscId(null)}>
               Fechar
             </Button>

@@ -1,10 +1,7 @@
 import { db } from "@/db/db";
 import { deleteLocal, saveLocal } from "@/db/queue";
 import type { EventoLocal, InscricaoLocal, PessoaLocal } from "@/db/types";
-import type {
-  EventoFormValues,
-  InscricaoFormValues,
-} from "@/features/eventos/evento-schema";
+import type { EventoFormValues, InscricaoFormValues } from "@/features/eventos/evento-schema";
 
 const nowIso = () => new Date().toISOString();
 
@@ -55,9 +52,7 @@ export async function getEventoDetalhe(id: string): Promise<EventoDetalhe | null
   const pessoas = await db.pessoas.bulkGet(inscricoes.map((i) => i.pessoa_id));
   const inscritos = inscricoes
     .map((inscricao, i) => ({ inscricao, pessoa: pessoas[i] ?? null }))
-    .sort((a, b) =>
-      (a.pessoa?.nome_completo ?? "").localeCompare(b.pessoa?.nome_completo ?? ""),
-    );
+    .sort((a, b) => (a.pessoa?.nome_completo ?? "").localeCompare(b.pessoa?.nome_completo ?? ""));
 
   return { evento, inscritos, totalInscritos: inscricoes.length };
 }
@@ -66,10 +61,7 @@ export async function countInscritos(eventoId: string): Promise<number> {
   return db.inscricoes.where("evento_id").equals(eventoId).count();
 }
 
-export async function saveEvento(
-  values: EventoFormValues,
-  id?: string,
-): Promise<string> {
+export async function saveEvento(values: EventoFormValues, id?: string): Promise<string> {
   const existente = id ? await db.eventos.get(id) : undefined;
   const eventoId = existente?.id ?? crypto.randomUUID();
   const now = nowIso();
@@ -107,9 +99,7 @@ export interface InscricaoDetalhe {
   evento: EventoLocal | null;
 }
 
-export async function getInscricaoDetalhe(
-  id: string,
-): Promise<InscricaoDetalhe | null> {
+export async function getInscricaoDetalhe(id: string): Promise<InscricaoDetalhe | null> {
   const inscricao = await db.inscricoes.get(id);
   if (!inscricao) return null;
   const [pessoa, evento] = await Promise.all([
@@ -169,16 +159,11 @@ export async function buscarInscricoes(
       evento: eventos[idx] ?? null,
     }))
     .filter(({ pessoa }) => pessoa?.nome_completo.toLowerCase().includes(t))
-    .sort((a, b) =>
-      (a.pessoa?.nome_completo ?? "").localeCompare(b.pessoa?.nome_completo ?? ""),
-    )
+    .sort((a, b) => (a.pessoa?.nome_completo ?? "").localeCompare(b.pessoa?.nome_completo ?? ""))
     .slice(0, 20);
 }
 
-export async function getPessoaJaInscrita(
-  eventoId: string,
-  pessoaId: string,
-): Promise<boolean> {
+export async function getPessoaJaInscrita(eventoId: string, pessoaId: string): Promise<boolean> {
   const inscricoes = await db.inscricoes.where("evento_id").equals(eventoId).toArray();
   return inscricoes.some((i) => i.pessoa_id === pessoaId);
 }
@@ -193,10 +178,7 @@ export async function listPessoasDisponiveis(eventoId: string): Promise<PessoaLo
   return pessoas.filter((p) => !inscritos.has(p.id));
 }
 
-export async function addInscricao(
-  eventoId: string,
-  values: InscricaoFormValues,
-): Promise<string> {
+export async function addInscricao(eventoId: string, values: InscricaoFormValues): Promise<string> {
   const jaInscrita = await getPessoaJaInscrita(eventoId, values.pessoa_id);
   if (jaInscrita) throw new Error("Esta pessoa já está inscrita neste evento.");
 
@@ -223,9 +205,7 @@ export async function addInscricao(
 
 export async function updateInscricao(
   id: string,
-  patch: Partial<
-    Pick<InscricaoLocal, "status" | "pagamento_status" | "valor" | "forma_pagamento">
-  >,
+  patch: Partial<Pick<InscricaoLocal, "status" | "pagamento_status" | "valor" | "forma_pagamento">>,
 ): Promise<void> {
   const atual = await db.inscricoes.get(id);
   if (!atual) return;

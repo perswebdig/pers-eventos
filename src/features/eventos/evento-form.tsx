@@ -14,11 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  EVENTO_STATUS,
-  eventoFormSchema,
-  type EventoFormValues,
-} from "./evento-schema";
+import { EVENTO_STATUS, eventoFormSchema, type EventoFormValues } from "./evento-schema";
 
 function Field({
   label,

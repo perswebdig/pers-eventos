@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import { pessoaSchema, toPessoaRow, toMenorRow } from "@/features/pessoas/pessoa-schema";
 import { ehMenor } from "@/lib/format";
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const row = toPessoaRow(values);
 
   const tenantId = ctx.isSuperAdmin ? ctx.tenantId : ctx.tenantId;
-// Super admin pode criar em qualquer tenant; se não especificado, usa o próprio
+  // Super admin pode criar em qualquer tenant; se não especificado, usa o próprio
   if (!tenantId && !ctx.isSuperAdmin) {
     return jsonError("Tenant não definido.", 400);
   }

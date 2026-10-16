@@ -8,18 +8,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Leaf, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/env";
 import { APP_NAME } from "@/lib/constants";
 
@@ -103,9 +97,7 @@ function AuthFields({ modo }: { modo: "signin" | "signup" }) {
         <div className="grid gap-1.5">
           <Label htmlFor="nome">Nome</Label>
           <Input id="nome" autoComplete="name" {...register("nome")} />
-          {errors.nome ? (
-            <p className="text-xs text-destructive">{errors.nome.message}</p>
-          ) : null}
+          {errors.nome ? <p className="text-xs text-destructive">{errors.nome.message}</p> : null}
         </div>
       ) : null}
 
@@ -119,9 +111,7 @@ function AuthFields({ modo }: { modo: "signin" | "signup" }) {
           placeholder="voce@exemplo.com"
           {...register("email")}
         />
-        {errors.email ? (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        ) : null}
+        {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
       </div>
 
       <div className="grid gap-1.5">
@@ -156,8 +146,8 @@ export function AuthForm() {
         </div>
         <CardTitle>Entrar no {APP_NAME}</CardTitle>
         <CardDescription>
-          Acesse com e-mail e senha. Seus dados ficam no dispositivo e sincronizam
-          quando houver conexão.
+          Acesse com e-mail e senha. Seus dados ficam no dispositivo e sincronizam quando houver
+          conexão.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
@@ -168,14 +158,10 @@ export function AuthForm() {
             </p>
             <p className="mt-1 text-muted-foreground">
               Defina <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
-              <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> em <code>.env.local</code> e
-              reinicie o servidor. Sem isso o app funciona apenas offline.
+              <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> em <code>.env.local</code> e reinicie o
+              servidor. Sem isso o app funciona apenas offline.
             </p>
-            <Button
-              variant="outline"
-              className="mt-3"
-              render={<Link href="/dashboard" />}
-            >
+            <Button variant="outline" className="mt-3" render={<Link href="/dashboard" />}>
               Continuar offline
             </Button>
           </div>

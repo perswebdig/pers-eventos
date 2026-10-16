@@ -2,11 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
-import {
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-  assertSupabaseConfigured,
-} from "@/lib/env";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, assertSupabaseConfigured } from "@/lib/env";
 
 // Singleton: evita múltiplas instâncias GoTrueClient no browser.
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;

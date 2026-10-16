@@ -15,8 +15,7 @@ export default async function PortalCadastroPage() {
         <div>
           <h1 className="text-xl font-semibold">Meu cadastro</h1>
           <p className="text-sm text-muted-foreground">
-            Preencha seus dados e aceite os termos de LGPD para participar dos
-            eventos.
+            Preencha seus dados e aceite os termos de LGPD para participar dos eventos.
           </p>
         </div>
         <Button variant="outline" render={<Link href="/portal">Voltar</Link>}>

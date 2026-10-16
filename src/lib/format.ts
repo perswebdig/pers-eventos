@@ -5,13 +5,9 @@ export { onlyDigits, formatCpf, isValidCpf } from "./cpf";
 export function formatTelefone(value: string): string {
   const d = onlyDigits(value).slice(0, 11);
   if (d.length <= 10) {
-    return d
-      .replace(/^(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+    return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
   }
-  return d
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 
 export function formatDate(iso: string | null | undefined): string {
@@ -48,5 +44,10 @@ export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const date = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+  return date.toLocaleString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  });
 }

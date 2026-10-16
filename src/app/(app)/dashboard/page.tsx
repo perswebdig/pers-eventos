@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Users, CalendarDays, CheckCircle2, ClipboardList, TrendingUp } from "lucide-react";
 import { requireTenant } from "@/lib/auth/session";
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,14 +54,15 @@ async function eventosProximos(tenantId: string) {
 export default async function DashboardPage() {
   const ctx = await requireTenant();
 
-  const [totalPessoas, totalEventos, totalInscricoes, totalTermos, checkinsHoje, proximos] = await Promise.all([
-    contar("pessoas", ctx.tenantId),
-    contar("eventos", ctx.tenantId),
-    contar("inscricoes", ctx.tenantId),
-    contar("termos", ctx.tenantId),
-    contarCheckinsHoje(ctx.tenantId),
-    eventosProximos(ctx.tenantId),
-  ]);
+  const [totalPessoas, totalEventos, totalInscricoes, totalTermos, checkinsHoje, proximos] =
+    await Promise.all([
+      contar("pessoas", ctx.tenantId),
+      contar("eventos", ctx.tenantId),
+      contar("inscricoes", ctx.tenantId),
+      contar("termos", ctx.tenantId),
+      contarCheckinsHoje(ctx.tenantId),
+      eventosProximos(ctx.tenantId),
+    ]);
 
   const cards = [
     { label: "Pessoas", value: totalPessoas, icon: Users, href: "/pessoas" },
@@ -80,7 +81,14 @@ export default async function DashboardPage() {
             Visão geral do seu estabelecimento: <strong>{ctx.estabelecimento?.nome}</strong>
           </p>
         </div>
-        <Button render={<Link href="/eventos"><CheckCircle2 className="mr-2 size-4" /> Novo evento</Link>} size="sm">
+        <Button
+          render={
+            <Link href="/eventos">
+              <CheckCircle2 className="mr-2 size-4" /> Novo evento
+            </Link>
+          }
+          size="sm"
+        >
           Novo evento
         </Button>
       </div>
@@ -89,9 +97,7 @@ export default async function DashboardPage() {
         {cards.map((c) => (
           <Card key={c.label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {c.label}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{c.label}</CardTitle>
               <c.icon className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -116,7 +122,11 @@ export default async function DashboardPage() {
                     {e.nome}
                   </Link>
                   <span className="text-sm text-muted-foreground">
-                    {new Date(e.data_inicio).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                    {new Date(e.data_inicio).toLocaleDateString("pt-BR", {
+                      weekday: "short",
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}
                   </span>
                 </li>
               ))}

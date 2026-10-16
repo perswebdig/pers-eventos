@@ -5,7 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Users, Building2, Mail, Shield, CheckCircle2, CalendarDays, X } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  Building2,
+  Mail,
+  Shield,
+  CheckCircle2,
+  CalendarDays,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +22,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "../../lib/env";
 import { slugify } from "../../features/admin/estabelecimento-schema";
 
 const onboardingSchema = z.object({
   // Estabelecimento
   estabelecimento_nome: z.string().trim().min(3, "Nome do estabelecimento (mín. 3 letras)"),
-  estabelecimento_slug: z.string().trim().min(2, "Identificador único").regex(/^[a-z0-9-]+$/, "Apenas letras minúsculas, números e hífen"),
+  estabelecimento_slug: z
+    .string()
+    .trim()
+    .min(2, "Identificador único")
+    .regex(/^[a-z0-9-]+$/, "Apenas letras minúsculas, números e hífen"),
   estabelecimento_cnpj: z.string().trim().optional(),
   estabelecimento_email: z.string().trim().email("E-mail inválido").optional().or(z.literal("")),
   estabelecimento_telefone: z.string().trim().optional(),
@@ -29,11 +42,15 @@ const onboardingSchema = z.object({
   estabelecimento_estado: z.string().trim().max(2, "Sigla do estado (ex.: SP)").optional(),
 
   // Convite de equipe
-  convites: z.array(z.object({
-    email: z.string().trim().email("E-mail inválido"),
-    papel: z.enum(["tenant_admin", "staff"]),
-    nome: z.string().trim().min(2, "Nome completo"),
-  })).optional(),
+  convites: z
+    .array(
+      z.object({
+        email: z.string().trim().email("E-mail inválido"),
+        papel: z.enum(["tenant_admin", "staff"]),
+        nome: z.string().trim().min(2, "Nome completo"),
+      }),
+    )
+    .optional(),
 
   // Primeiro evento
   primeiro_evento_nome: z.string().trim().min(3, "Nome do evento").optional(),
@@ -45,7 +62,8 @@ type OnboardingValues = z.infer<typeof onboardingSchema>;
 
 function traduzirErro(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes("duplicate") || m.includes("already exists")) return "Já existe um registro com este valor único.";
+  if (m.includes("duplicate") || m.includes("already exists"))
+    return "Já existe um registro com este valor único.";
   if (m.includes("invalid")) return "Dados inválidos.";
   return message;
 }
@@ -127,7 +145,9 @@ function OnboardingContent() {
       setEtapa(2);
       toast.success("Estabelecimento criado!");
     } catch (err) {
-      toast.error("Falha ao criar estabelecimento", { description: traduzirErro((err as Error).message) });
+      toast.error("Falha ao criar estabelecimento", {
+        description: traduzirErro((err as Error).message),
+      });
     } finally {
       setSalvando(false);
     }
@@ -148,17 +168,15 @@ function OnboardingContent() {
       }
 
       if (values.primeiro_evento_nome) {
-        const { error } = await supabase
-          .from("eventos")
-          .insert({
-            tenant_id: estabelecimentoId,
-            nome: values.primeiro_evento_nome!.trim(),
-            descricao: "",
-            data_inicio: values.primeiro_evento_data || new Date().toISOString().split("T")[0],
-            local: values.primeiro_evento_local || "",
-            capacidade: null,
-            status: "planejado",
-          });
+        const { error } = await supabase.from("eventos").insert({
+          tenant_id: estabelecimentoId,
+          nome: values.primeiro_evento_nome!.trim(),
+          descricao: "",
+          data_inicio: values.primeiro_evento_data || new Date().toISOString().split("T")[0],
+          local: values.primeiro_evento_local || "",
+          capacidade: null,
+          status: "planejado",
+        });
         if (error) throw error;
       }
 
@@ -166,7 +184,9 @@ function OnboardingContent() {
       router.replace(redirectTo);
       router.refresh();
     } catch (err) {
-      toast.error("Falha ao concluir onboarding", { description: traduzirErro((err as Error).message) });
+      toast.error("Falha ao concluir onboarding", {
+        description: traduzirErro((err as Error).message),
+      });
     } finally {
       setSalvando(false);
     }
@@ -208,9 +228,11 @@ function OnboardingContent() {
                 <div key={e.num} className="flex items-center gap-2">
                   <div
                     className={`flex size-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                      i + 1 < etapa ? "bg-green-600 text-white" :
-                      i + 1 === etapa ? "bg-green-600 text-white" :
-                      "bg-muted text-muted-foreground"
+                      i + 1 < etapa
+                        ? "bg-green-600 text-white"
+                        : i + 1 === etapa
+                          ? "bg-green-600 text-white"
+                          : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {i + 1 < etapa ? <CheckCircle2 className="size-4" /> : e.num}
@@ -222,8 +244,8 @@ function OnboardingContent() {
           </div>
           <CardTitle>Bem-vindo ao PersEventos!</CardTitle>
           <CardDescription>
-            Vamos configurar seu estabelecimento em {etapas.length} etapas rápidas.
-            Etapa {etapa} de {etapas.length}: {etapas[etapa - 1].label}
+            Vamos configurar seu estabelecimento em {etapas.length} etapas rápidas. Etapa {etapa} de{" "}
+            {etapas.length}: {etapas[etapa - 1].label}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -242,7 +264,9 @@ function OnboardingContent() {
                   {...register("estabelecimento_nome")}
                   placeholder="Ex.: Sítio Vale Verde"
                 />
-                {errors.estabelecimento_nome && <p className="text-xs text-destructive">{errors.estabelecimento_nome.message}</p>}
+                {errors.estabelecimento_nome && (
+                  <p className="text-xs text-destructive">{errors.estabelecimento_nome.message}</p>
+                )}
               </div>
 
               <div className="grid gap-1.5">
@@ -253,8 +277,12 @@ function OnboardingContent() {
                   placeholder="sitio-vale-verde"
                   readOnly={!!slugEstabelecimento}
                 />
-                <p className="text-xs text-muted-foreground">Gerado automaticamente do nome. Usado em URLs internas.</p>
-                {errors.estabelecimento_slug && <p className="text-xs text-destructive">{errors.estabelecimento_slug.message}</p>}
+                <p className="text-xs text-muted-foreground">
+                  Gerado automaticamente do nome. Usado em URLs internas.
+                </p>
+                {errors.estabelecimento_slug && (
+                  <p className="text-xs text-destructive">{errors.estabelecimento_slug.message}</p>
+                )}
               </div>
 
               <div className="grid gap-1.5">
@@ -276,7 +304,9 @@ function OnboardingContent() {
                   placeholder="contato@exemplo.com"
                   {...register("estabelecimento_email")}
                 />
-                {errors.estabelecimento_email && <p className="text-xs text-destructive">{errors.estabelecimento_email.message}</p>}
+                {errors.estabelecimento_email && (
+                  <p className="text-xs text-destructive">{errors.estabelecimento_email.message}</p>
+                )}
               </div>
 
               <div className="grid gap-1.5">
@@ -300,12 +330,25 @@ function OnboardingContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
                   <Label htmlFor="estabelecimento_cidade">Cidade</Label>
-                  <Input id="estabelecimento_cidade" {...register("estabelecimento_cidade")} placeholder="São Paulo" />
+                  <Input
+                    id="estabelecimento_cidade"
+                    {...register("estabelecimento_cidade")}
+                    placeholder="São Paulo"
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="estabelecimento_estado">Estado</Label>
-                  <Input id="estabelecimento_estado" maxLength={2} {...register("estabelecimento_estado")} placeholder="SP" />
-                  {errors.estabelecimento_estado && <p className="text-xs text-destructive">{errors.estabelecimento_estado.message}</p>}
+                  <Input
+                    id="estabelecimento_estado"
+                    maxLength={2}
+                    {...register("estabelecimento_estado")}
+                    placeholder="SP"
+                  />
+                  {errors.estabelecimento_estado && (
+                    <p className="text-xs text-destructive">
+                      {errors.estabelecimento_estado.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -328,7 +371,12 @@ function OnboardingContent() {
 
               <ConvitesForm register={register} watch={watch} />
 
-              <Button type="button" variant="outline" onClick={() => setEtapa(3)} className="w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEtapa(3)}
+                className="w-full"
+              >
                 Pular: Criar primeiro evento
               </Button>
             </form>
@@ -343,21 +391,38 @@ function OnboardingContent() {
 
               <div className="grid gap-1.5">
                 <Label htmlFor="primeiro_evento_nome">Nome do evento</Label>
-                <Input id="primeiro_evento_nome" {...register("primeiro_evento_nome")} placeholder="Retiro de Primavera" />
+                <Input
+                  id="primeiro_evento_nome"
+                  {...register("primeiro_evento_nome")}
+                  placeholder="Retiro de Primavera"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
                   <Label htmlFor="primeiro_evento_data">Data de início</Label>
-                  <Input id="primeiro_evento_data" type="date" {...register("primeiro_evento_data")} />
+                  <Input
+                    id="primeiro_evento_data"
+                    type="date"
+                    {...register("primeiro_evento_data")}
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="primeiro_evento_local">Local</Label>
-                  <Input id="primeiro_evento_local" {...register("primeiro_evento_local")} placeholder="Sítio Vale Verde" />
+                  <Input
+                    id="primeiro_evento_local"
+                    {...register("primeiro_evento_local")}
+                    placeholder="Sítio Vale Verde"
+                  />
                 </div>
               </div>
 
-              <Button type="button" variant="outline" onClick={() => setEtapa(2)} className="w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEtapa(2)}
+                className="w-full"
+              >
                 Voltar
               </Button>
             </form>
@@ -372,7 +437,11 @@ function OnboardingContent() {
               <p className="text-muted-foreground">
                 Seu estabelecimento foi criado, a equipe foi convidada e o primeiro evento agendado.
               </p>
-              <Button type="submit" disabled={salvando} className="w-full bg-green-600 hover:bg-green-700">
+              <Button
+                type="submit"
+                disabled={salvando}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
                 {salvando ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
                 Finalizar e ir para o painel
               </Button>
@@ -403,7 +472,9 @@ function OnboardingContent() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ConvitesForm({ register, watch }: { register: any; watch: any }) {
-  const [convites, setConvites] = useState<Array<{ email: string; papel: "tenant_admin" | "staff"; nome: string }>>([]);
+  const [convites, setConvites] = useState<
+    Array<{ email: string; papel: "tenant_admin" | "staff"; nome: string }>
+  >([]);
 
   function adicionarConvite() {
     setConvites([...convites, { email: "", papel: "staff", nome: "" }]);
@@ -413,7 +484,7 @@ function ConvitesForm({ register, watch }: { register: any; watch: any }) {
     setConvites(convites.filter((_, i) => i !== idx));
   }
 
-  function atualizarConvite(idx: number, field: keyof typeof convites[0], value: string) {
+  function atualizarConvite(idx: number, field: keyof (typeof convites)[0], value: string) {
     setConvites(convites.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
   }
 
@@ -442,7 +513,9 @@ function ConvitesForm({ register, watch }: { register: any; watch: any }) {
           />
           <select
             value={c.papel}
-            onChange={(e) => atualizarConvite(i, "papel", e.target.value as "tenant_admin" | "staff")}
+            onChange={(e) =>
+              atualizarConvite(i, "papel", e.target.value as "tenant_admin" | "staff")
+            }
             className="w-36 rounded-md border bg-background px-2 py-1.5 text-sm"
           >
             <option value="staff">Recepção</option>

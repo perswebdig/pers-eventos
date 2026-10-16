@@ -61,10 +61,7 @@ async function main() {
   assert(erros({ cpf: "123.456.789-00" }).includes("cpf"), "CPF inválido barra o cadastro");
   assert(erros({ email: "sem-arroba" }).includes("email"), "e-mail inválido barra");
 
-  assert(
-    erros({ consentimento_lgpd: false }).includes("consentimento_lgpd"),
-    "LGPD obrigatório",
-  );
+  assert(erros({ consentimento_lgpd: false }).includes("consentimento_lgpd"), "LGPD obrigatório");
 
   // Menor sem responsável → erro nos campos do responsável.
   const menorSemResp = erros({ data_nascimento: `${ano - 12}-06-01` });

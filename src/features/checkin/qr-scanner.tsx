@@ -42,13 +42,10 @@ export function QrScanner({
 
     async function start() {
       if (!isQrScanSupported()) {
-        onErrorRef.current?.(
-          "Leitor de QR não suportado neste navegador. Use a busca manual.",
-        );
+        onErrorRef.current?.("Leitor de QR não suportado neste navegador. Use a busca manual.");
         return;
       }
-      const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
-        .BarcodeDetector;
+      const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor }).BarcodeDetector;
 
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -103,12 +100,7 @@ export function QrScanner({
 
   return (
     <div className="relative overflow-hidden rounded-lg border bg-black">
-      <video
-        ref={videoRef}
-        className="aspect-video w-full object-cover"
-        muted
-        playsInline
-      />
+      <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="size-44 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
       </div>

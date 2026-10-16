@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
-import {
-  pessoaSchema,
-  toMenorRow,
-  toPessoaRow,
-} from "@/features/pessoas/pessoa-schema";
+import { createClient } from "@/lib/supabase/server";
+import { pessoaSchema, toMenorRow, toPessoaRow } from "@/features/pessoas/pessoa-schema";
 import { ehMenor } from "@/lib/format";
 
 // GET /api/portal/perfil — dados da pessoa vinculada ao cliente logado.
@@ -55,10 +51,7 @@ export async function PUT(request: Request) {
   let pessoaId = ctx.pessoaId;
 
   if (pessoaId) {
-    const { error } = await supabase
-      .from("pessoas")
-      .update(row)
-      .eq("id", pessoaId);
+    const { error } = await supabase.from("pessoas").update(row).eq("id", pessoaId);
     if (error) return jsonError(error.message, 400);
   } else {
     const { data: created, error } = await supabase

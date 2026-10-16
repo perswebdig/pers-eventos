@@ -14,13 +14,19 @@ function from(client: Client, entidade: EntidadeSync) {
       select: () => { single: () => Promise<{ data: Row | null; error: unknown }> };
     };
     update: (v: Row) => {
-      eq: (c: string, v: string) => {
+      eq: (
+        c: string,
+        v: string,
+      ) => {
         select: () => { single: () => Promise<{ data: Row | null; error: unknown }> };
       };
     };
     delete: () => { eq: (c: string, v: string) => Promise<{ error: unknown }> };
     select: (c: string) => {
-      order: (c: string, o: { ascending: boolean }) => {
+      order: (
+        c: string,
+        o: { ascending: boolean },
+      ) => {
         limit: (n: number) => {
           gt: (c: string, v: string) => Promise<{ data: Row[] | null; error: unknown }>;
         } & Promise<{ data: Row[] | null; error: unknown }>;
@@ -50,7 +56,10 @@ export function createSupabaseTransport(client: Client): SyncTransport {
       if (error) throw error;
     },
     async fetchSince(entidade, since, limit) {
-      const base = from(client, entidade).select("*").order("updated_at", { ascending: true }).limit(limit);
+      const base = from(client, entidade)
+        .select("*")
+        .order("updated_at", { ascending: true })
+        .limit(limit);
       if (since) {
         const { data, error } = await base.gt("updated_at", since);
         if (error) throw error;

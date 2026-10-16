@@ -39,10 +39,7 @@ export interface EventoResumo {
 }
 
 export async function getEventosResumo(): Promise<EventoResumo> {
-  const [eventos, inscricoes] = await Promise.all([
-    db.eventos.toArray(),
-    db.inscricoes.toArray(),
-  ]);
+  const [eventos, inscricoes] = await Promise.all([db.eventos.toArray(), db.inscricoes.toArray()]);
 
   const porStatus: Record<string, number> = {};
   let capacidadeTotal = 0;
@@ -176,7 +173,11 @@ export async function exportarPessoasCSV(): Promise<string> {
       medicacoes: p.medicacoes ?? "",
       observacoes: p.observacoes ?? "",
       lgpd: p.consentimento_lgpd ? "sim" : "nao",
-      menor: p.data_nascimento && new Date(p.data_nascimento) > new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000) ? "sim" : "nao",
+      menor:
+        p.data_nascimento &&
+        new Date(p.data_nascimento) > new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000)
+          ? "sim"
+          : "nao",
       created_at: p.created_at,
       updated_at: p.updated_at,
       sync_status: p.sync_status,
@@ -267,7 +268,9 @@ export async function exportarLogsAcessoCSV(): Promise<string> {
 }
 
 // Dados para gráfico de check-ins por dia (últimos 30 dias)
-export async function getCheckinsPorDia(dias = 30): Promise<Array<{ data: string; checkins: number; checkouts: number }>> {
+export async function getCheckinsPorDia(
+  dias = 30,
+): Promise<Array<{ data: string; checkins: number; checkouts: number }>> {
   const inscricoes = await db.inscricoes.toArray();
   const porDia: Record<string, { checkins: number; checkouts: number }> = {};
 

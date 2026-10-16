@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/portal/eventos — eventos abertos no estabelecimento do cliente.
 export async function GET() {

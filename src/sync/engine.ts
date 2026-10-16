@@ -31,7 +31,10 @@ export function isRetryable(err: unknown): boolean {
   if (err instanceof TypeError) return true;
   const e = err as { status?: number; message?: string; code?: string };
   if (typeof e?.status === "number" && e.status >= 500) return true;
-  if (typeof e?.message === "string" && /fetch|network|timeout|load failed|failed to fetch/i.test(e.message)) {
+  if (
+    typeof e?.message === "string" &&
+    /fetch|network|timeout|load failed|failed to fetch/i.test(e.message)
+  ) {
     return true;
   }
   return false;
@@ -178,10 +181,7 @@ export async function pullChanges(
 }
 
 // Ciclo completo: envia pendentes e depois baixa novidades.
-export async function runSync(
-  db: PersEventosDB,
-  transport: SyncTransport,
-): Promise<SyncResult> {
+export async function runSync(db: PersEventosDB, transport: SyncTransport): Promise<SyncResult> {
   const result: SyncResult = { pushed: 0, pulled: 0, conflicts: 0, errors: 0 };
   await pushChanges(db, transport, result);
   await pullChanges(db, transport, result);

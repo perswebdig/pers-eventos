@@ -77,7 +77,8 @@ export function PessoaForm({
             inputMode="numeric"
             placeholder="000.000.000-00"
             {...register("cpf", {
-              onChange: (e) => setValue("cpf", formatCpf(e.target.value), { shouldValidate: false }),
+              onChange: (e) =>
+                setValue("cpf", formatCpf(e.target.value), { shouldValidate: false }),
             })}
           />
         </Field>
@@ -199,8 +200,8 @@ export function PessoaForm({
         />
         <div>
           <Label htmlFor="consentimento_lgpd" className="text-sm font-normal">
-            O titular consente com o tratamento dos dados pessoais para as
-            finalidades das vivências (LGPD).
+            O titular consente com o tratamento dos dados pessoais para as finalidades das vivências
+            (LGPD).
           </Label>
           {errors.consentimento_lgpd ? (
             <p className="text-xs text-destructive">{errors.consentimento_lgpd.message}</p>

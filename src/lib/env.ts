@@ -8,8 +8,7 @@ export const SUPABASE_ANON_KEY =
   "";
 
 // Flag usada para evitar criar clientes Supabase inválidos (ex.: build sem env).
-export const isSupabaseConfigured =
-  SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
+export const isSupabaseConfigured = SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
 
 export function assertSupabaseConfigured(): void {
   if (!isSupabaseConfigured) {

@@ -83,7 +83,10 @@ export function PessoaDetailSheet({
                 Dados
               </h3>
               <dl className="divide-y">
-                <Linha rotulo="CPF" valor={detalhe.pessoa.cpf ? formatCpf(detalhe.pessoa.cpf) : null} />
+                <Linha
+                  rotulo="CPF"
+                  valor={detalhe.pessoa.cpf ? formatCpf(detalhe.pessoa.cpf) : null}
+                />
                 <Linha rotulo="RG" valor={detalhe.pessoa.rg} />
                 <Linha
                   rotulo="Nascimento"
@@ -137,10 +140,7 @@ export function PessoaDetailSheet({
                     </h3>
                     <dl className="divide-y">
                       <Linha rotulo="Nome" valor={detalhe.menor.responsavel_nome} />
-                      <Linha
-                        rotulo="CPF"
-                        valor={formatCpf(detalhe.menor.responsavel_cpf)}
-                      />
+                      <Linha rotulo="CPF" valor={formatCpf(detalhe.menor.responsavel_cpf)} />
                     </dl>
                   </div>
                 </>
@@ -189,7 +189,11 @@ export function PessoaDetailSheet({
 
             <SheetFooter className="border-t">
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => onEdit(detalhe.pessoa.id)}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => onEdit(detalhe.pessoa.id)}
+                >
                   <Pencil className="size-4" /> Editar
                 </Button>
                 <Button

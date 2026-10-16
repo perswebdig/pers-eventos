@@ -27,7 +27,10 @@ async function main() {
   await db.open();
 
   for (const t of TABELAS_ESPERADAS) {
-    assert(db.tables.some((x) => x.name === t), `tabela "${t}" existe`);
+    assert(
+      db.tables.some((x) => x.name === t),
+      `tabela "${t}" existe`,
+    );
   }
   console.log(`OK  ${TABELAS_ESPERADAS.length} tabelas criadas`);
 

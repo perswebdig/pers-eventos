@@ -31,9 +31,7 @@ export async function enqueue(
     .equals([entidade, entidadeId])
     .toArray();
 
-  const ids = existentes
-    .map((e) => e.id)
-    .filter((id): id is number => typeof id === "number");
+  const ids = existentes.map((e) => e.id).filter((id): id is number => typeof id === "number");
 
   if (operacao === "delete") {
     // Se o registro nunca foi enviado, basta sumir com a fila (nada no servidor).
@@ -87,13 +85,7 @@ export async function saveLocal<T extends { id: string }>(
     sync_status: "pending" as const,
   };
   await table.put(record);
-  await enqueue(
-    db,
-    entidade,
-    id,
-    existente ? "update" : "insert",
-    toServerPayload(record as Row),
-  );
+  await enqueue(db, entidade, id, existente ? "update" : "insert", toServerPayload(record as Row));
   return record;
 }
 

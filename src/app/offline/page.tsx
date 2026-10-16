@@ -16,16 +16,13 @@ export default function OfflinePage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold">Você está offline</h1>
             <p className="text-muted-foreground">
-              Esta página precisa de conexão, mas o restante do sistema continua
-              funcionando. As alterações que você fizer serão salvas localmente e
-              sincronizadas quando a internet voltar.
+              Esta página precisa de conexão, mas o restante do sistema continua funcionando. As
+              alterações que você fizer serão salvas localmente e sincronizadas quando a internet
+              voltar.
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              render={<Link href="/dashboard" />}
-            >
+            <Button variant="outline" render={<Link href="/dashboard" />}>
               Ir para o painel
             </Button>
             <Button onClick={() => window.location.reload()}>

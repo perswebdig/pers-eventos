@@ -10,9 +10,7 @@ export default async function PortalIndexPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="text-xl font-semibold">
-        Olá, {ctx.nome ?? ctx.email ?? "cliente"}!
-      </h1>
+      <h1 className="text-xl font-semibold">Olá, {ctx.nome ?? ctx.email ?? "cliente"}!</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {ctx.estabelecimento
           ? `Você é cliente de ${ctx.estabelecimento.nome}.`
@@ -22,36 +20,48 @@ export default async function PortalIndexPage() {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">
-              Cadastro
-            </CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Cadastro</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button render={<Link href="/portal/cadastro">{ctx.pessoaId ? "Editar dados" : "Completar cadastro"}</Link>} size="sm" className="w-full">
+            <Button
+              render={
+                <Link href="/portal/cadastro">
+                  {ctx.pessoaId ? "Editar dados" : "Completar cadastro"}
+                </Link>
+              }
+              size="sm"
+              className="w-full"
+            >
               {ctx.pessoaId ? "Editar dados" : "Completar cadastro"}
             </Button>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">
-              Eventos
-            </CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Eventos</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button render={<Link href="/portal/eventos">Ver eventos</Link>} size="sm" variant="outline" className="w-full">
+            <Button
+              render={<Link href="/portal/eventos">Ver eventos</Link>}
+              size="sm"
+              variant="outline"
+              className="w-full"
+            >
               Ver eventos
             </Button>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">
-              QR Code
-            </CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">QR Code</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button render={<Link href="/portal/qr">Meu QR Code</Link>} size="sm" variant="outline" className="w-full">
+            <Button
+              render={<Link href="/portal/qr">Meu QR Code</Link>}
+              size="sm"
+              variant="outline"
+              className="w-full"
+            >
               Meu QR Code
             </Button>
           </CardContent>

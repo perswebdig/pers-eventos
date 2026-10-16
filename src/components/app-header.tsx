@@ -37,13 +37,9 @@ export function AppHeader({
           </span>
         ) : null}
 
-        <nav
-          className="ml-4 hidden items-center gap-1 md:flex"
-          aria-label="Navegação principal"
-        >
+        <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Navegação principal">
           {items.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
@@ -75,8 +71,7 @@ export function AppHeader({
         aria-label="Navegação principal"
       >
         {items.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

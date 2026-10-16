@@ -1,8 +1,8 @@
-import 'fake-indexeddb/auto';
-import { beforeEach, afterEach, vi } from 'vitest';
+import "fake-indexeddb/auto";
+import { beforeEach, afterEach, vi } from "vitest";
 
 // Mock next/navigation
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
@@ -10,11 +10,11 @@ vi.mock('next/navigation', () => ({
     back: vi.fn(),
   }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/',
+  usePathname: () => "/",
 }));
 
 // Mock sonner toast
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -24,13 +24,36 @@ vi.mock('sonner', () => ({
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => {
+vi.mock("lucide-react", () => {
   const icons = [
-    'Users', 'CalendarDays', 'ClipboardList', 'FileText', 'Activity',
-    'Download', 'BarChart2', 'Plus', 'Search', 'UserPlus', 'Leaf',
-    'ScanLine', 'CheckCircle2', 'LogOut', 'RotateCcw', 'X', 'Circle',
-    'AlertCircle', 'MapPin', 'Eye', 'Download', 'Pen', 'Trash2',
-    'Square', 'RefreshCw', 'WifiOff', 'Database', 'ArrowDownTray',
+    "Users",
+    "CalendarDays",
+    "ClipboardList",
+    "FileText",
+    "Activity",
+    "Download",
+    "BarChart2",
+    "Plus",
+    "Search",
+    "UserPlus",
+    "Leaf",
+    "ScanLine",
+    "CheckCircle2",
+    "LogOut",
+    "RotateCcw",
+    "X",
+    "Circle",
+    "AlertCircle",
+    "MapPin",
+    "Eye",
+    "Download",
+    "Pen",
+    "Trash2",
+    "Square",
+    "RefreshCw",
+    "WifiOff",
+    "Database",
+    "ArrowDownTray",
   ];
   const mockIcon = (name: string) => ({
     name,
@@ -40,22 +63,22 @@ vi.mock('lucide-react', () => {
 });
 
 // Mock next-themes
-vi.mock('next-themes', () => ({
-  useTheme: () => ({ theme: 'system', setTheme: vi.fn(), resolvedTheme: 'light' }),
+vi.mock("next-themes", () => ({
+  useTheme: () => ({ theme: "system", setTheme: vi.fn(), resolvedTheme: "light" }),
   ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock @supabase/ssr
-vi.mock('@supabase/ssr', () => ({
+vi.mock("@supabase/ssr", () => ({
   createBrowserClient: vi.fn(),
   createServerClient: vi.fn(),
 }));
 
 // Mock environment
-vi.mock('@/lib/env', () => ({
+vi.mock("@/lib/env", () => ({
   isSupabaseConfigured: false,
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
   assertSupabaseConfigured: vi.fn(),
 }));
 

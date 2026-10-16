@@ -15,12 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableHeader,
@@ -47,7 +42,13 @@ import {
 } from "@/db/repos/relatorios";
 import { formatDate } from "@/lib/format";
 
-function SummaryCard({ title, value, icon: Icon, subtitle, trend }: {
+function SummaryCard({
+  title,
+  value,
+  icon: Icon,
+  subtitle,
+  trend,
+}: {
   title: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
@@ -71,7 +72,15 @@ function SummaryCard({ title, value, icon: Icon, subtitle, trend }: {
   );
 }
 
-function StatusBadge({ label, count, color = "secondary" }: { label: string; count: number; color?: string }) {
+function StatusBadge({
+  label,
+  count,
+  color = "secondary",
+}: {
+  label: string;
+  count: number;
+  color?: string;
+}) {
   const tones: Record<string, string> = {
     secondary: "bg-secondary text-secondary-foreground",
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -88,7 +97,15 @@ function StatusBadge({ label, count, color = "secondary" }: { label: string; cou
   );
 }
 
-function ExportButton({ onClick, disabled, label = "Exportar CSV" }: { onClick: () => Promise<void>; disabled?: boolean; label?: string }) {
+function ExportButton({
+  onClick,
+  disabled,
+  label = "Exportar CSV",
+}: {
+  onClick: () => Promise<void>;
+  disabled?: boolean;
+  label?: string;
+}) {
   return (
     <Button variant="outline" size="sm" onClick={onClick} disabled={disabled}>
       <Download className="size-4" /> {label}
@@ -100,16 +117,47 @@ function PessoaResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getPess
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard title="Total de pessoas" value={resumo.total} icon={Users} subtitle="Cadastradas" />
-        <SummaryCard title="Com CPF" value={resumo.comCpf} icon={FileText} subtitle="Documentados" />
-        <SummaryCard title="Menores de 18" value={resumo.menores} icon={Users} subtitle="Requer responsável" />
-        <SummaryCard title="Consentimento LGPD" value={resumo.consentimentoLgpd} icon={ClipboardList} subtitle="Aceitos" />
+        <SummaryCard
+          title="Total de pessoas"
+          value={resumo.total}
+          icon={Users}
+          subtitle="Cadastradas"
+        />
+        <SummaryCard
+          title="Com CPF"
+          value={resumo.comCpf}
+          icon={FileText}
+          subtitle="Documentados"
+        />
+        <SummaryCard
+          title="Menores de 18"
+          value={resumo.menores}
+          icon={Users}
+          subtitle="Requer responsável"
+        />
+        <SummaryCard
+          title="Consentimento LGPD"
+          value={resumo.consentimentoLgpd}
+          icon={ClipboardList}
+          subtitle="Aceitos"
+        />
       </div>
       <Separator />
       <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "synced" ? "green" : status === "pending" ? "amber" : status === "conflict" ? "red" : "gray"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "synced"
+                ? "green"
+                : status === "pending"
+                  ? "amber"
+                  : status === "conflict"
+                    ? "red"
+                    : "gray"
+            }
           />
         ))}
       </div>
@@ -121,23 +169,69 @@ function EventoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getEven
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard title="Total de eventos" value={resumo.total} icon={CalendarDays} subtitle="Criados" />
-        <SummaryCard title="Capacidade total" value={resumo.capacidadeTotal} icon={Users} subtitle="Vagas oferecidas" />
-        <SummaryCard title="Vagas preenchidas" value={resumo.vagasPreenchidas} icon={ClipboardList} subtitle="Inscrições" />
-        <SummaryCard title="Taxa de ocupação" value={resumo.capacidadeTotal > 0 ? Math.round((resumo.vagasPreenchidas / resumo.capacidadeTotal) * 100) + "%" : "—"} icon={Activity} subtitle="Média geral" />
+        <SummaryCard
+          title="Total de eventos"
+          value={resumo.total}
+          icon={CalendarDays}
+          subtitle="Criados"
+        />
+        <SummaryCard
+          title="Capacidade total"
+          value={resumo.capacidadeTotal}
+          icon={Users}
+          subtitle="Vagas oferecidas"
+        />
+        <SummaryCard
+          title="Vagas preenchidas"
+          value={resumo.vagasPreenchidas}
+          icon={ClipboardList}
+          subtitle="Inscrições"
+        />
+        <SummaryCard
+          title="Taxa de ocupação"
+          value={
+            resumo.capacidadeTotal > 0
+              ? Math.round((resumo.vagasPreenchidas / resumo.capacidadeTotal) * 100) + "%"
+              : "—"
+          }
+          icon={Activity}
+          subtitle="Média geral"
+        />
       </div>
       <Separator />
       <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porStatus).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "realizado" ? "green" : status === "lotado" ? "amber" : status === "cancelado" ? "red" : "blue"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "realizado"
+                ? "green"
+                : status === "lotado"
+                  ? "amber"
+                  : status === "cancelado"
+                    ? "red"
+                    : "blue"
+            }
           />
         ))}
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
         {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "synced" ? "green" : status === "pending" ? "amber" : status === "conflict" ? "red" : "gray"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "synced"
+                ? "green"
+                : status === "pending"
+                  ? "amber"
+                  : status === "conflict"
+                    ? "red"
+                    : "gray"
+            }
           />
         ))}
       </div>
@@ -145,21 +239,67 @@ function EventoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getEven
   );
 }
 
-function InscricaoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getInscricoesResumo>> }) {
+function InscricaoResumoTab({
+  resumo,
+}: {
+  resumo: Awaited<ReturnType<typeof getInscricoesResumo>>;
+}) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <SummaryCard title="Total de inscrições" value={resumo.total} icon={ClipboardList} subtitle="Registradas" />
-        <SummaryCard title="Check-ins" value={resumo.checkinsRealizados} icon={Activity} subtitle="Entradas" />
-        <SummaryCard title="Check-outs" value={resumo.checkoutsRealizados} icon={Activity} subtitle="Saídas" />
-        <SummaryCard title="Presentes agora" value={resumo.checkinsRealizados - resumo.checkoutsRealizados} icon={Users} subtitle="No local" />
-        <SummaryCard title="Termos assinados" value={resumo.total - (resumo.porStatus["inscrito"] ?? 0) - (resumo.porStatus["cancelado"] ?? 0)} icon={FileText} subtitle="Compliance" />
+        <SummaryCard
+          title="Total de inscrições"
+          value={resumo.total}
+          icon={ClipboardList}
+          subtitle="Registradas"
+        />
+        <SummaryCard
+          title="Check-ins"
+          value={resumo.checkinsRealizados}
+          icon={Activity}
+          subtitle="Entradas"
+        />
+        <SummaryCard
+          title="Check-outs"
+          value={resumo.checkoutsRealizados}
+          icon={Activity}
+          subtitle="Saídas"
+        />
+        <SummaryCard
+          title="Presentes agora"
+          value={resumo.checkinsRealizados - resumo.checkoutsRealizados}
+          icon={Users}
+          subtitle="No local"
+        />
+        <SummaryCard
+          title="Termos assinados"
+          value={
+            resumo.total -
+            (resumo.porStatus["inscrito"] ?? 0) -
+            (resumo.porStatus["cancelado"] ?? 0)
+          }
+          icon={FileText}
+          subtitle="Compliance"
+        />
       </div>
       <Separator />
       <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porStatus).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "checkin" ? "green" : status === "checkout" ? "blue" : status === "confirmado" ? "purple" : status === "cancelado" ? "red" : "gray"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "checkin"
+                ? "green"
+                : status === "checkout"
+                  ? "blue"
+                  : status === "confirmado"
+                    ? "purple"
+                    : status === "cancelado"
+                      ? "red"
+                      : "gray"
+            }
           />
         ))}
       </div>
@@ -170,8 +310,19 @@ function InscricaoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getI
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
         {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "synced" ? "green" : status === "pending" ? "amber" : status === "conflict" ? "red" : "gray"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "synced"
+                ? "green"
+                : status === "pending"
+                  ? "amber"
+                  : status === "conflict"
+                    ? "red"
+                    : "gray"
+            }
           />
         ))}
       </div>
@@ -183,15 +334,41 @@ function TermoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getTermo
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <SummaryCard title="Total de termos" value={resumo.total} icon={FileText} subtitle="Aceitos" />
-        <SummaryCard title="Responsabilidade" value={resumo.porTipo.responsabilidade ?? 0} icon={ClipboardList} subtitle="Termos" />
-        <SummaryCard title="Uso de imagem" value={resumo.porTipo.imagem ?? 0} icon={FileText} subtitle="Termos" />
+        <SummaryCard
+          title="Total de termos"
+          value={resumo.total}
+          icon={FileText}
+          subtitle="Aceitos"
+        />
+        <SummaryCard
+          title="Responsabilidade"
+          value={resumo.porTipo.responsabilidade ?? 0}
+          icon={ClipboardList}
+          subtitle="Termos"
+        />
+        <SummaryCard
+          title="Uso de imagem"
+          value={resumo.porTipo.imagem ?? 0}
+          icon={FileText}
+          subtitle="Termos"
+        />
       </div>
       <Separator />
       <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <StatusBadge key={status} label={status} count={count}
-            color={status === "synced" ? "green" : status === "pending" ? "amber" : status === "conflict" ? "red" : "gray"}
+          <StatusBadge
+            key={status}
+            label={status}
+            count={count}
+            color={
+              status === "synced"
+                ? "green"
+                : status === "pending"
+                  ? "amber"
+                  : status === "conflict"
+                    ? "red"
+                    : "gray"
+            }
           />
         ))}
       </div>
@@ -199,10 +376,19 @@ function TermoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getTermo
   );
 }
 
-function LogAcessoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getLogsAcessoResumo>> }) {
+function LogAcessoResumoTab({
+  resumo,
+}: {
+  resumo: Awaited<ReturnType<typeof getLogsAcessoResumo>>;
+}) {
   return (
     <div className="space-y-4">
-      <SummaryCard title="Total de acessos" value={resumo.total} icon={Activity} subtitle="Registrados" />
+      <SummaryCard
+        title="Total de acessos"
+        value={resumo.total}
+        icon={Activity}
+        subtitle="Registrados"
+      />
       <Separator />
       <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porAcao).map(([acao, count]) => (
@@ -220,12 +406,15 @@ function LogAcessoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getL
             </tr>
           </thead>
           <tbody>
-            {resumo.ultimosDias.slice().reverse().map(({ data, count }) => (
-              <tr key={data} className="border-t">
-                <td className="py-1">{formatDate(data)}</td>
-                <td className="py-1 text-right font-mono">{count}</td>
-              </tr>
-            ))}
+            {resumo.ultimosDias
+              .slice()
+              .reverse()
+              .map(({ data, count }) => (
+                <tr key={data} className="border-t">
+                  <td className="py-1">{formatDate(data)}</td>
+                  <td className="py-1 text-right font-mono">{count}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
@@ -278,42 +467,69 @@ export function RelatoriosDashboard() {
 
       <Tabs defaultValue="pessoas" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="pessoas"><Users className="size-4 mr-1" /> Pessoas</TabsTrigger>
-          <TabsTrigger value="eventos"><CalendarDays className="size-4 mr-1" /> Eventos</TabsTrigger>
-          <TabsTrigger value="inscricoes"><ClipboardList className="size-4 mr-1" /> Inscrições</TabsTrigger>
-          <TabsTrigger value="termos"><FileText className="size-4 mr-1" /> Termos</TabsTrigger>
-          <TabsTrigger value="logs"><Activity className="size-4 mr-1" /> Logs LGPD</TabsTrigger>
-          <TabsTrigger value="grafico"><BarChart2 className="size-4 mr-1" /> Gráfico</TabsTrigger>
+          <TabsTrigger value="pessoas">
+            <Users className="size-4 mr-1" /> Pessoas
+          </TabsTrigger>
+          <TabsTrigger value="eventos">
+            <CalendarDays className="size-4 mr-1" /> Eventos
+          </TabsTrigger>
+          <TabsTrigger value="inscricoes">
+            <ClipboardList className="size-4 mr-1" /> Inscrições
+          </TabsTrigger>
+          <TabsTrigger value="termos">
+            <FileText className="size-4 mr-1" /> Termos
+          </TabsTrigger>
+          <TabsTrigger value="logs">
+            <Activity className="size-4 mr-1" /> Logs LGPD
+          </TabsTrigger>
+          <TabsTrigger value="grafico">
+            <BarChart2 className="size-4 mr-1" /> Gráfico
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pessoas">
           {pessoasResumo === undefined ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <PessoaResumoTab resumo={pessoasResumo as Awaited<ReturnType<typeof getPessoasResumo>>} />
+            <PessoaResumoTab
+              resumo={pessoasResumo as Awaited<ReturnType<typeof getPessoasResumo>>}
+            />
           )}
           <Separator />
-          <ExportButton onClick={() => handleExport(exportarPessoasCSV, "pessoas.csv")} disabled={exportando} />
+          <ExportButton
+            onClick={() => handleExport(exportarPessoasCSV, "pessoas.csv")}
+            disabled={exportando}
+          />
         </TabsContent>
 
         <TabsContent value="eventos">
           {eventosResumo === undefined ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <EventoResumoTab resumo={eventosResumo as Awaited<ReturnType<typeof getEventosResumo>>} />
+            <EventoResumoTab
+              resumo={eventosResumo as Awaited<ReturnType<typeof getEventosResumo>>}
+            />
           )}
           <Separator />
-          <ExportButton onClick={() => handleExport(exportarEventosCSV, "eventos.csv")} disabled={exportando} />
+          <ExportButton
+            onClick={() => handleExport(exportarEventosCSV, "eventos.csv")}
+            disabled={exportando}
+          />
         </TabsContent>
 
         <TabsContent value="inscricoes">
           {inscricoesResumo === undefined ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <InscricaoResumoTab resumo={inscricoesResumo as Awaited<ReturnType<typeof getInscricoesResumo>>} />
+            <InscricaoResumoTab
+              resumo={inscricoesResumo as Awaited<ReturnType<typeof getInscricoesResumo>>}
+            />
           )}
           <Separator />
-          <ExportButton onClick={() => handleExport(exportarInscricoesCSV, "inscricoes.csv")} disabled={exportando} />
+          <ExportButton
+            onClick={() => handleExport(exportarInscricoesCSV, "inscricoes.csv")}
+            disabled={exportando}
+          />
         </TabsContent>
 
         <TabsContent value="termos">
@@ -323,22 +539,30 @@ export function RelatoriosDashboard() {
             <TermoResumoTab resumo={termosResumo as Awaited<ReturnType<typeof getTermosResumo>>} />
           )}
           <Separator />
-          <ExportButton onClick={() => handleExport(exportarTermosCSV, "termos.csv")} disabled={exportando} />
+          <ExportButton
+            onClick={() => handleExport(exportarTermosCSV, "termos.csv")}
+            disabled={exportando}
+          />
         </TabsContent>
 
         <TabsContent value="logs">
           {logsResumo === undefined ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <LogAcessoResumoTab resumo={logsResumo as Awaited<ReturnType<typeof getLogsAcessoResumo>>} />
+            <LogAcessoResumoTab
+              resumo={logsResumo as Awaited<ReturnType<typeof getLogsAcessoResumo>>}
+            />
           )}
           <Separator />
-          <ExportButton onClick={() => handleExport(exportarLogsAcessoCSV, "logs-acesso.csv")} disabled={exportando} />
+          <ExportButton
+            onClick={() => handleExport(exportarLogsAcessoCSV, "logs-acesso.csv")}
+            disabled={exportando}
+          />
         </TabsContent>
 
         <TabsContent value="grafico">
           <CheckinsChart />
-</TabsContent>
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -366,7 +590,9 @@ function CheckinsChart() {
         <div className="space-y-3">
           {dados.map((d) => (
             <div key={d.data} className="flex items-center gap-3">
-              <span className="w-24 text-xs text-muted-foreground font-mono">{formatDate(d.data)}</span>
+              <span className="w-24 text-xs text-muted-foreground font-mono">
+                {formatDate(d.data)}
+              </span>
               <div className="flex-1 h-6 bg-muted rounded relative overflow-hidden">
                 {d.checkins > 0 && (
                   <div
@@ -394,8 +620,12 @@ function CheckinsChart() {
           ))}
         </div>
         <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded" /> Check-ins</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded" /> Check-outs</span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-green-500 rounded" /> Check-ins
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-blue-500 rounded" /> Check-outs
+          </span>
         </div>
       </CardContent>
     </Card>

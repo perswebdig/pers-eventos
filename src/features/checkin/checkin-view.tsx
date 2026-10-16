@@ -17,10 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -106,13 +103,10 @@ function ActionCard({
           <StatusBadge status={st} />
         </div>
         {pessoa?.cpf && <p className="text-sm text-muted-foreground">CPF: {pessoa.cpf}</p>}
-        <p className="text-sm text-muted-foreground">
-          {evento?.nome ?? "Evento não encontrado"}
-        </p>
+        <p className="text-sm text-muted-foreground">{evento?.nome ?? "Evento não encontrado"}</p>
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t">
           <div>
-            <span className="font-medium">Check-in:</span>{" "}
-            {formatDateTime(inscricao.data_checkin)}
+            <span className="font-medium">Check-in:</span> {formatDateTime(inscricao.data_checkin)}
           </div>
           <div>
             <span className="font-medium">Check-out:</span>{" "}
@@ -137,14 +131,28 @@ function ActionCard({
         ) : st === "checkout" ? (
           <Button
             className="w-full bg-green-600 hover:bg-green-700"
-            onClick={() => onCheckin(inscricao.id, inscricao.evento_id, inscricao.pessoa_id, pessoa?.nome_completo ?? "")}
+            onClick={() =>
+              onCheckin(
+                inscricao.id,
+                inscricao.evento_id,
+                inscricao.pessoa_id,
+                pessoa?.nome_completo ?? "",
+              )
+            }
           >
             <RotateCcw className="size-4" /> Nova entrada
           </Button>
         ) : (
           <Button
             className="w-full bg-green-600 hover:bg-green-700"
-            onClick={() => onCheckin(inscricao.id, inscricao.evento_id, inscricao.pessoa_id, pessoa?.nome_completo ?? "")}
+            onClick={() =>
+              onCheckin(
+                inscricao.id,
+                inscricao.evento_id,
+                inscricao.pessoa_id,
+                pessoa?.nome_completo ?? "",
+              )
+            }
           >
             <CheckCircle2 className="size-4" /> Check-in
           </Button>
@@ -274,9 +282,15 @@ export function CheckinView() {
               className="w-full"
               onClick={() => setScannerAtivo(!scannerAtivo)}
             >
-              {scannerAtivo
-                ? <span className="flex items-center gap-2 justify-center"><Circle className="size-4 animate-spin" /> Parar leitor</span>
-                : <span className="flex items-center gap-2 justify-center"><ScanLine className="size-4" /> Abrir leitor de QR</span>}
+              {scannerAtivo ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <Circle className="size-4 animate-spin" /> Parar leitor
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 justify-center">
+                  <ScanLine className="size-4" /> Abrir leitor de QR
+                </span>
+              )}
             </Button>
           )}
 
@@ -291,9 +305,7 @@ export function CheckinView() {
             <Button type="submit">Buscar</Button>
           </form>
 
-          {erroScanner && (
-            <p className="text-sm text-destructive">{erroScanner}</p>
-          )}
+          {erroScanner && <p className="text-sm text-destructive">{erroScanner}</p>}
         </CardContent>
       </Card>
 

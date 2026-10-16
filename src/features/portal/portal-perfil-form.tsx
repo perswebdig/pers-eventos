@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PessoaForm } from "@/features/pessoas/pessoa-form";
-import {
-  toPessoaFormValues,
-  type PessoaFormValues,
-} from "@/features/pessoas/pessoa-schema";
+import { toPessoaFormValues, type PessoaFormValues } from "@/features/pessoas/pessoa-schema";
 import type { Pessoa } from "@/types/database";
 
 // Formulário de autoatendimento do cliente (cria/edita a própria pessoa).
@@ -25,7 +22,7 @@ export function PortalPerfilForm() {
         setValues(toPessoaFormValues((body.data?.pessoa ?? {}) as Partial<Pessoa>));
       })
       .catch(() => {
-        if (ativo)         setValues(toPessoaFormValues({} as Partial<Pessoa>));
+        if (ativo) setValues(toPessoaFormValues({} as Partial<Pessoa>));
       });
     return () => {
       ativo = false;

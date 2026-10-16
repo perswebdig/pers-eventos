@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Building2, CalendarDays, CheckCircle2, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,7 @@ export const metadata = { title: "Super Admin" };
 async function contar(tabela: "estabelecimentos" | "pessoas" | "eventos") {
   if (!isSupabaseConfigured) return 0;
   const supabase = await createClient();
-  const { count } = await supabase
-    .from(tabela)
-    .select("*", { count: "exact", head: true });
+  const { count } = await supabase.from(tabela).select("*", { count: "exact", head: true });
   return count ?? 0;
 }
 
@@ -51,9 +49,7 @@ export default async function AdminIndexPage() {
         {cards.map((c) => (
           <Card key={c.label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {c.label}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{c.label}</CardTitle>
               <c.icon className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

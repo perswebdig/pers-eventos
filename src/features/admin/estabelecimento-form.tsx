@@ -116,10 +116,7 @@ export function EstabelecimentoForm({
           control={control}
           name="ativo"
           render={({ field }) => (
-            <Switch
-              checked={field.value}
-              onCheckedChange={(v) => field.onChange(v)}
-            />
+            <Switch checked={field.value} onCheckedChange={(v) => field.onChange(v)} />
           )}
         />
       </div>

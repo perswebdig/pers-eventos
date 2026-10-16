@@ -61,13 +61,7 @@ export interface MetaLocal {
 }
 
 export type EntidadeSync =
-  | "pessoas"
-  | "menores"
-  | "eventos"
-  | "inscricoes"
-  | "documentos"
-  | "termos"
-  | "log_acesso_dados";
+  "pessoas" | "menores" | "eventos" | "inscricoes" | "documentos" | "termos" | "log_acesso_dados";
 
 // Ordem de sincronização respeitando dependências de FK:
 // pessoas antes de menores/documentos/inscricoes; eventos antes de inscricoes.

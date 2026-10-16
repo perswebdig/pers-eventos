@@ -2,8 +2,7 @@
 // Mantemos um prefixo versionado para permitir evoluir o formato depois.
 const PREFIX = "PERS1:";
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function encodeInscricaoQr(inscricaoId: string): string {
   return `${PREFIX}${inscricaoId}`;

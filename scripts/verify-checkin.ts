@@ -1,7 +1,11 @@
 import "fake-indexeddb/auto";
 import { db } from "../src/db/db";
 import type { PessoaLocal, EventoLocal, InscricaoLocal } from "../src/db/types";
-import { eventoFormSchema, toEventoFormValues, type EventoFormValues } from "../src/features/eventos/evento-schema";
+import {
+  eventoFormSchema,
+  toEventoFormValues,
+  type EventoFormValues,
+} from "../src/features/eventos/evento-schema";
 import { parseInscricaoQr, encodeInscricaoQr } from "../src/features/checkin/qr";
 import {
   addInscricao,
@@ -33,10 +37,22 @@ function pessoa(nome: string): PessoaLocal {
   return {
     id: crypto.randomUUID(),
     nome_completo: nome,
-    cpf: null, rg: null, data_nascimento: null, telefone: null, email: null,
-    endereco: null, contato_emergencia_nome: null, contato_emergencia_telefone: null,
-    restricoes_alimentares: null, condicoes_saude: null, medicacoes: null,
-    observacoes: null, consentimento_lgpd: true, created_at: ts, updated_at: ts, sync_status: "synced",
+    cpf: null,
+    rg: null,
+    data_nascimento: null,
+    telefone: null,
+    email: null,
+    endereco: null,
+    contato_emergencia_nome: null,
+    contato_emergencia_telefone: null,
+    restricoes_alimentares: null,
+    condicoes_saude: null,
+    medicacoes: null,
+    observacoes: null,
+    consentimento_lgpd: true,
+    created_at: ts,
+    updated_at: ts,
+    sync_status: "synced",
   };
 }
 
@@ -59,8 +75,20 @@ async function main() {
   await db.pessoas.bulkPut([p1, p2]);
 
   const evId = await saveEvento({ ...baseEvento, capacidade: "2" });
-  const insId = await addInscricao(evId, { pessoa_id: p1.id, status: "confirmado", pagamento_status: "pago", valor: "", forma_pagamento: "" });
-  await addInscricao(evId, { pessoa_id: p2.id, status: "inscrito", pagamento_status: "pendente", valor: "", forma_pagamento: "" });
+  const insId = await addInscricao(evId, {
+    pessoa_id: p1.id,
+    status: "confirmado",
+    pagamento_status: "pago",
+    valor: "",
+    forma_pagamento: "",
+  });
+  await addInscricao(evId, {
+    pessoa_id: p2.id,
+    status: "inscrito",
+    pagamento_status: "pendente",
+    valor: "",
+    forma_pagamento: "",
+  });
 
   // A) check-in primeira vez
   const detCheckin = await fazerCheckin(insId);

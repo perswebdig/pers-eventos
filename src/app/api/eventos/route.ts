@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
-import {
-  eventoFormSchema,
-  toEventoRow,
-} from "@/features/eventos/evento-schema";
+import { createClient } from "@/lib/supabase/server";
+import { eventoFormSchema, toEventoRow } from "@/features/eventos/evento-schema";
 
 // GET /api/eventos — lista os eventos do estabelecimento (RLS por tenant).
 export async function GET() {

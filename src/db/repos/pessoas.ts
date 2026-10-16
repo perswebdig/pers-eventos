@@ -35,10 +35,7 @@ export async function getPessoaDetalhe(id: string): Promise<PessoaDetalhe | null
   return { pessoa, menor, historico };
 }
 
-export async function savePessoa(
-  values: PessoaFormValues,
-  id?: string,
-): Promise<string> {
+export async function savePessoa(values: PessoaFormValues, id?: string): Promise<string> {
   const existente = id ? await db.pessoas.get(id) : undefined;
   const pessoaId = existente?.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
@@ -113,7 +110,14 @@ export async function deletePessoa(id: string): Promise<void> {
 }
 
 // Busca local por nome, CPF ou telefone (IndexedDB, sem rede).
-export function filtrarPessoas<T extends { nome_completo: string; cpf?: string | null; telefone?: string | null; email?: string | null }>(pessoas: T[], termo: string): T[] {
+export function filtrarPessoas<
+  T extends {
+    nome_completo: string;
+    cpf?: string | null;
+    telefone?: string | null;
+    email?: string | null;
+  },
+>(pessoas: T[], termo: string): T[] {
   const t = termo.trim().toLowerCase();
   if (!t) return pessoas;
   const numeros = onlyDigits(t);

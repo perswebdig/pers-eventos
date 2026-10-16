@@ -2,12 +2,7 @@ import "fake-indexeddb/auto";
 import { PersEventosDB } from "../src/db/db";
 import { saveLocal, deleteLocal } from "../src/db/queue";
 import type { EntidadeSync } from "../src/db/types";
-import {
-  pushChanges,
-  pullChanges,
-  runSync,
-  type SyncTransport,
-} from "../src/sync/engine";
+import { pushChanges, pullChanges, runSync, type SyncTransport } from "../src/sync/engine";
 
 type Row = Record<string, unknown>;
 
@@ -105,11 +100,10 @@ async function main() {
   // -------------------------------------------------------------------------
   console.log("\n== C) pendente local NUNCA é sobrescrito pelo remoto ==");
   // Edição local pendente:
-  await saveLocal(
-    db,
-    "pessoas",
-    { ...(p1 as unknown as Row), nome_completo: "Ana Editada Offline" } as never,
-  );
+  await saveLocal(db, "pessoas", {
+    ...(p1 as unknown as Row),
+    nome_completo: "Ana Editada Offline",
+  } as never);
   // Outro aparelho atualiza o mesmo registro (updated_at mais novo, sem push):
   server.write("pessoas", { ...pessoa("p1", "Ana Remota"), cpf: null } as Row);
   const r3 = await pullChanges(db, server); // pull sem push

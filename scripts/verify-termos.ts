@@ -1,6 +1,13 @@
 import "fake-indexeddb/auto";
 import Dexie from "dexie";
-import { registrarAceiteTermo, listTermos, getAssinaturaBlob, jaAceitouTermo, registrarLogAcesso, listLogsAcesso } from "../src/db/repos/termos";
+import {
+  registrarAceiteTermo,
+  listTermos,
+  getAssinaturaBlob,
+  jaAceitouTermo,
+  registrarLogAcesso,
+  listLogsAcesso,
+} from "../src/db/repos/termos";
 import { termoTipoLabel } from "../src/features/termos/termo-schema";
 import type { SyncStatus } from "../src/types/database";
 
@@ -14,10 +21,22 @@ function pessoa(nome: string) {
   return {
     id: crypto.randomUUID(),
     nome_completo: nome,
-    cpf: null, rg: null, data_nascimento: null, telefone: null, email: null,
-    endereco: null, contato_emergencia_nome: null, contato_emergencia_telefone: null,
-    restricoes_alimentares: null, condicoes_saude: null, medicacoes: null,
-    observacoes: null, consentimento_lgpd: true, created_at: ts, updated_at: ts, sync_status: "synced" as SyncStatus,
+    cpf: null,
+    rg: null,
+    data_nascimento: null,
+    telefone: null,
+    email: null,
+    endereco: null,
+    contato_emergencia_nome: null,
+    contato_emergencia_telefone: null,
+    restricoes_alimentares: null,
+    condicoes_saude: null,
+    medicacoes: null,
+    observacoes: null,
+    consentimento_lgpd: true,
+    created_at: ts,
+    updated_at: ts,
+    sync_status: "synced" as SyncStatus,
   };
 }
 
@@ -33,7 +52,7 @@ class TestDB extends Dexie {
     super(name);
     // Versão alta para evitar colisão de schema cacheado no fake-indexeddb
     const version = 50 + Math.floor(Math.random() * 1000);
-this.version(version).stores({
+    this.version(version).stores({
       pessoas: "id, cpf, nome_completo, telefone, email, updated_at, sync_status",
       menores: "id, pessoa_id, updated_at, sync_status",
       termos: "id, pessoa_id, evento_id, tipo, aceito_em, updated_at, sync_status",
@@ -52,7 +71,10 @@ async function main() {
   await testDb.open();
 
   console.log("== Termo schema labels ==");
-  assert(termoTipoLabel("responsabilidade") === "Termo de Responsabilidade", "label responsabilidade");
+  assert(
+    termoTipoLabel("responsabilidade") === "Termo de Responsabilidade",
+    "label responsabilidade",
+  );
   assert(termoTipoLabel("imagem") === "Termo de Uso de Imagem", "label imagem");
   assert(termoTipoLabel("outro") === "outro", "label desconhecido");
 
@@ -65,7 +87,8 @@ async function main() {
   const termoId = await registrarAceiteTermo({
     pessoa_id: p1.id,
     tipo: "responsabilidade",
-    assinatura_base64: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+    assinatura_base64:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
   });
   const termos = await listTermos(p1.id);
   assert(termos.length === 1, "termo criado");
@@ -73,8 +96,8 @@ async function main() {
   assert(termos[0].sync_status === "pending", "marcado pending");
 
   // B) verificar jaAceitouTermo
-  assert(await jaAceitouTermo(p1.id, "responsabilidade") === true, "já aceitou responsabilidade");
-  assert(await jaAceitouTermo(p1.id, "imagem") === false, "não aceitou imagem");
+  assert((await jaAceitouTermo(p1.id, "responsabilidade")) === true, "já aceitou responsabilidade");
+  assert((await jaAceitouTermo(p1.id, "imagem")) === false, "não aceitou imagem");
 
   // C) assinatura blob
   const blob = await getAssinaturaBlob(termoId);
@@ -84,7 +107,8 @@ async function main() {
   await registrarAceiteTermo({
     pessoa_id: p1.id,
     tipo: "imagem",
-    assinatura_base64: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+    assinatura_base64:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
   });
   const todos = await listTermos(p1.id);
   assert(todos.length === 2, "dois termos aceitos");

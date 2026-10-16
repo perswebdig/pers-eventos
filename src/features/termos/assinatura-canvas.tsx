@@ -2,7 +2,16 @@
 
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 export function AssinaturaCanvas({
   value,
@@ -101,9 +110,7 @@ export function AssinaturaCanvas({
       </div>
       {!readOnly && (
         <div className="flex items-center justify-between p-2 border-t bg-muted/30">
-          <span className="text-xs text-muted-foreground">
-            Desenhe a assinatura acima
-          </span>
+          <span className="text-xs text-muted-foreground">Desenhe a assinatura acima</span>
           <div className="flex gap-2">
             <Button
               variant="outline"

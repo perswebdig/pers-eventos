@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import { pessoaPatchSchema, toPessoaPatchRow } from "@/features/pessoas/pessoa-schema";
 import { ehMenor } from "@/lib/format";
 import type { Pessoa } from "@/types/database";
@@ -73,18 +73,16 @@ export async function PATCH(request: Request, { params }: Params) {
       .select("responsavel_nome, responsavel_cpf")
       .eq("pessoa_id", id)
       .maybeSingle();
-    
+
     if (menorExistente?.responsavel_nome && menorExistente?.responsavel_cpf) {
-      const { error: menorError } = await supabase
-        .from("menores")
-        .upsert(
-          {
-            pessoa_id: id,
-            responsavel_nome: menorExistente.responsavel_nome.trim(),
-            responsavel_cpf: menorExistente.responsavel_cpf.replace(/\D/g, ""),
-          },
-          { onConflict: "pessoa_id" },
-        );
+      const { error: menorError } = await supabase.from("menores").upsert(
+        {
+          pessoa_id: id,
+          responsavel_nome: menorExistente.responsavel_nome.trim(),
+          responsavel_cpf: menorExistente.responsavel_cpf.replace(/\D/g, ""),
+        },
+        { onConflict: "pessoa_id" },
+      );
       if (menorError) return jsonError(menorError.message, 400);
     }
   }

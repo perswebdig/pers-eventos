@@ -29,11 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EventoForm } from "./evento-form";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
-import {
-  eventoStatusLabel,
-  toEventoFormValues,
-  type EventoFormValues,
-} from "./evento-schema";
+import { eventoStatusLabel, toEventoFormValues, type EventoFormValues } from "./evento-schema";
 import {
   deleteEvento,
   filtrarEventos,
@@ -53,10 +49,13 @@ const STATUS_TONE: Record<string, string> = {
   cancelado: "border-destructive/30 text-destructive",
 };
 
-const EventoDetailSheetLazy = dynamic(() => import("./evento-detail").then((m) => m.EventoDetailSheet), {
-  loading: () => <div className="animate-pulse h-64 w-full" />,
-  ssr: false,
-});
+const EventoDetailSheetLazy = dynamic(
+  () => import("./evento-detail").then((m) => m.EventoDetailSheet),
+  {
+    loading: () => <div className="animate-pulse h-64 w-full" />,
+    ssr: false,
+  },
+);
 
 export function EventosView() {
   const [termo, setTermo] = useState("");
@@ -175,10 +174,7 @@ export function EventosView() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium">{e.nome}</p>
-                    <Badge
-                      variant="outline"
-                      className={STATUS_TONE[e.status] ?? ""}
-                    >
+                    <Badge variant="outline" className={STATUS_TONE[e.status] ?? ""}>
                       {eventoStatusLabel(e.status)}
                     </Badge>
                   </div>
@@ -279,8 +275,8 @@ export function EventosView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação remove o evento, suas inscrições e termos relacionados neste
-              dispositivo e, quando houver conexão, no servidor. Não pode ser desfeita.
+              Esta ação remove o evento, suas inscrições e termos relacionados neste dispositivo e,
+              quando houver conexão, no servidor. Não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

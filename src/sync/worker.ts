@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { db } from "@/db/db";
 import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from "@/lib/supabase/client";
 import { useSyncStore } from "@/stores/sync-store";
 import { runSync, type SyncResult } from "./engine";
 import { createSupabaseTransport } from "./supabase-transport";

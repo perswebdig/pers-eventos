@@ -9,24 +9,16 @@ export interface ApiGuardResult {
 }
 
 // Guard para Route Handlers. Valida sessão e, opcionalmente, os papéis aceitos.
-export async function apiSession(
-  allowed?: readonly AppRole[],
-): Promise<ApiGuardResult> {
+export async function apiSession(allowed?: readonly AppRole[]): Promise<ApiGuardResult> {
   const ctx = await getSessionContext();
   if (!ctx) {
     return {
-      response: NextResponse.json(
-        { error: "Não autenticado." },
-        { status: 401 },
-      ),
+      response: NextResponse.json({ error: "Não autenticado." }, { status: 401 }),
     };
   }
   if (allowed && !allowed.includes(ctx.role)) {
     return {
-      response: NextResponse.json(
-        { error: "Acesso negado para o seu perfil." },
-        { status: 403 },
-      ),
+      response: NextResponse.json({ error: "Acesso negado para o seu perfil." }, { status: 403 }),
     };
   }
   return { ctx };

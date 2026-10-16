@@ -1,11 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
-import {
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-  assertSupabaseConfigured,
-} from "@/lib/env";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, assertSupabaseConfigured } from "@/lib/env";
 
 // Cliente para Server Components, Route Handlers e Server Actions.
 export async function createClient() {

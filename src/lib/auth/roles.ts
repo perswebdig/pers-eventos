@@ -69,9 +69,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
 
 export function ruleForPath(pathname: string): RouteRule | null {
   return (
-    ROUTE_RULES.find(
-      (r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`),
-    ) ?? null
+    ROUTE_RULES.find((r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`)) ?? null
   );
 }
 

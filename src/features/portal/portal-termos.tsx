@@ -7,11 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  TERMO_TIPO,
-  termoTexto,
-  type TermoTipo,
-} from "@/features/termos/termo-schema";
+import { TERMO_TIPO, termoTexto, type TermoTipo } from "@/features/termos/termo-schema";
 import type { Termo } from "@/types/database";
 
 export function PortalTermos() {
@@ -70,9 +66,7 @@ export function PortalTermos() {
                   <FileText className="size-4 text-muted-foreground" />
                   {label}
                 </p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {termoTexto[tipo]}
-                </p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{termoTexto[tipo]}</p>
               </div>
               {aceito ? (
                 <Badge

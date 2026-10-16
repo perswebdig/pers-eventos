@@ -42,10 +42,13 @@ import {
 import { seedLocalDatabase } from "@/db/seed";
 import { formatCpf, formatTelefone } from "@/lib/format";
 
-const PessoaDetailSheetLazy = dynamic(() => import("./pessoa-detail").then((m) => m.PessoaDetailSheet), {
-  loading: () => <div className="animate-pulse h-64 w-full" />,
-  ssr: false,
-});
+const PessoaDetailSheetLazy = dynamic(
+  () => import("./pessoa-detail").then((m) => m.PessoaDetailSheet),
+  {
+    loading: () => <div className="animate-pulse h-64 w-full" />,
+    ssr: false,
+  },
+);
 
 type PessoaComSync = Pessoa & Partial<LocalSyncFields>;
 
@@ -84,35 +87,39 @@ export function PessoasView() {
 
     let ativo = true;
     setPessoasCombinadas(null);
-    fetchServerPessoas().then((server) => {
-      if (!ativo) return;
-      if (server.length > 0) {
-        setPessoasCombinadas(server);
-      } else if (pessoasLocal !== undefined) {
-        setPessoasCombinadas(pessoasLocal);
-        setUsarLocal(true);
-        toast.info("Modo offline — usando dados locais");
-      } else {
-        setPessoasCombinadas([]);
-      }
-    }).catch(() => {
-      if (!ativo) return;
-      if (pessoasLocal !== undefined) {
-        setPessoasCombinadas(pessoasLocal);
-        setUsarLocal(true);
-        toast.info("Sem conexão — usando dados locais");
-      } else {
-        setPessoasCombinadas([]);
-      }
-    });
-    return () => { ativo = false; };
+    fetchServerPessoas()
+      .then((server) => {
+        if (!ativo) return;
+        if (server.length > 0) {
+          setPessoasCombinadas(server);
+        } else if (pessoasLocal !== undefined) {
+          setPessoasCombinadas(pessoasLocal);
+          setUsarLocal(true);
+          toast.info("Modo offline — usando dados locais");
+        } else {
+          setPessoasCombinadas([]);
+        }
+      })
+      .catch(() => {
+        if (!ativo) return;
+        if (pessoasLocal !== undefined) {
+          setPessoasCombinadas(pessoasLocal);
+          setUsarLocal(true);
+          toast.info("Sem conexão — usando dados locais");
+        } else {
+          setPessoasCombinadas([]);
+        }
+      });
+    return () => {
+      ativo = false;
+    };
   }, [pessoasLocal, usarLocal]);
 
   async function recarregar() {
     setAtualizando(true);
     setUsarLocal(false);
     setPessoasCombinadas(null);
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 100));
     setAtualizando(false);
   }
 
@@ -141,7 +148,9 @@ export function PessoasView() {
         } as Partial<Pessoa>),
       );
     });
-    return () => { ativo = false; };
+    return () => {
+      ativo = false;
+    };
   }, [formOpen, editingId, emptyValues]);
 
   function abrirCriacao() {
@@ -189,12 +198,24 @@ export function PessoasView() {
         <div>
           <h1 className="text-xl font-semibold">Pessoas</h1>
           <p className="text-sm text-muted-foreground">
-            {carregando || carregandoLocal ? "Carregando…" : `${filtradas?.length ?? 0} registro(s)`}
-            {usarLocal && <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Offline</span>}
+            {carregando || carregandoLocal
+              ? "Carregando…"
+              : `${filtradas?.length ?? 0} registro(s)`}
+            {usarLocal && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                Offline
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={recarregar} disabled={atualizando} aria-label="Recarregar do servidor">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={recarregar}
+            disabled={atualizando}
+            aria-label="Recarregar do servidor"
+          >
             <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
           </Button>
           <Button onClick={abrirCriacao}>
@@ -234,7 +255,10 @@ export function PessoasView() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{p.nome_completo}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {[p.cpf ? formatCpf(p.cpf) : null, p.telefone ? formatTelefone(p.telefone) : null]
+                    {[
+                      p.cpf ? formatCpf(p.cpf) : null,
+                      p.telefone ? formatTelefone(p.telefone) : null,
+                    ]
                       .filter(Boolean)
                       .join(" · ") || "Sem CPF/telefone"}
                   </p>
@@ -317,8 +341,8 @@ export function PessoasView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir pessoa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação remove a pessoa e seus dados relacionados neste dispositivo e,
-              quando houver conexão, no servidor. Não pode ser desfeita.
+              Esta ação remove a pessoa e seus dados relacionados neste dispositivo e, quando houver
+              conexão, no servidor. Não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

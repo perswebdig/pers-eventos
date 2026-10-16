@@ -70,9 +70,7 @@ export const pessoaPatchSchema = pessoaBaseSchema.partial();
 
 export type PessoaFormValues = z.infer<typeof pessoaSchema>;
 
-export function toPessoaFormValues(
-  pessoa: Partial<Pessoa>,
-): PessoaFormValues {
+export function toPessoaFormValues(pessoa: Partial<Pessoa>): PessoaFormValues {
   const str = (v: string | null | undefined) => v ?? "";
   return {
     nome_completo: str(pessoa.nome_completo),
@@ -89,8 +87,12 @@ export function toPessoaFormValues(
     medicacoes: str(pessoa.medicacoes),
     observacoes: str(pessoa.observacoes),
     consentimento_lgpd: Boolean(pessoa.consentimento_lgpd),
-    responsavel_nome: str((pessoa as Record<string, unknown>)["responsavel_nome"] as string | null | undefined),
-    responsavel_cpf: str((pessoa as Record<string, unknown>)["responsavel_cpf"] as string | null | undefined),
+    responsavel_nome: str(
+      (pessoa as Record<string, unknown>)["responsavel_nome"] as string | null | undefined,
+    ),
+    responsavel_cpf: str(
+      (pessoa as Record<string, unknown>)["responsavel_cpf"] as string | null | undefined,
+    ),
   };
 }
 
@@ -132,12 +134,18 @@ export function toPessoaPatchRow(values: Partial<PessoaFormValues>) {
   if (values.cpf !== undefined) patch.cpf = values.cpf ? onlyDigits(values.cpf) : null;
   if (values.rg !== undefined) patch.rg = nullify(values.rg);
   if (values.data_nascimento !== undefined) patch.data_nascimento = nullify(values.data_nascimento);
-  if (values.telefone !== undefined) patch.telefone = values.telefone ? onlyDigits(values.telefone) : null;
+  if (values.telefone !== undefined)
+    patch.telefone = values.telefone ? onlyDigits(values.telefone) : null;
   if (values.email !== undefined) patch.email = nullify(values.email);
   if (values.endereco !== undefined) patch.endereco = nullify(values.endereco);
-  if (values.contato_emergencia_nome !== undefined) patch.contato_emergencia_nome = nullify(values.contato_emergencia_nome);
-  if (values.contato_emergencia_telefone !== undefined) patch.contato_emergencia_telefone = values.contato_emergencia_telefone ? onlyDigits(values.contato_emergencia_telefone) : null;
-  if (values.restricoes_alimentares !== undefined) patch.restricoes_alimentares = nullify(values.restricoes_alimentares);
+  if (values.contato_emergencia_nome !== undefined)
+    patch.contato_emergencia_nome = nullify(values.contato_emergencia_nome);
+  if (values.contato_emergencia_telefone !== undefined)
+    patch.contato_emergencia_telefone = values.contato_emergencia_telefone
+      ? onlyDigits(values.contato_emergencia_telefone)
+      : null;
+  if (values.restricoes_alimentares !== undefined)
+    patch.restricoes_alimentares = nullify(values.restricoes_alimentares);
   if (values.condicoes_saude !== undefined) patch.condicoes_saude = nullify(values.condicoes_saude);
   if (values.medicacoes !== undefined) patch.medicacoes = nullify(values.medicacoes);
   if (values.observacoes !== undefined) patch.observacoes = nullify(values.observacoes);

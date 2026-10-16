@@ -20,9 +20,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon" aria-label="Alternar tema" />
-        }
+        render={<Button variant="ghost" size="icon" aria-label="Alternar tema" />}
       >
         {mounted ? (
           <>

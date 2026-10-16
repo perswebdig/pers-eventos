@@ -5,9 +5,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { getSessionContext, type SessionContext } from "@/lib/auth/session";
 import { homePathForRole } from "@/lib/auth/roles";
 
-export default async function AppLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let ctx: SessionContext | null = null;
 
   // Com Supabase configurado, exigimos sessão (o middleware também protege).

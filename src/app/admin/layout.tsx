@@ -1,9 +1,7 @@
 import { requireRole } from "@/lib/auth/session";
 import { AppHeader } from "@/components/app-header";
 
-export default async function AdminLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default async function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const ctx = await requireRole(["super_admin"]);
   return (
     <div className="flex min-h-dvh flex-col">

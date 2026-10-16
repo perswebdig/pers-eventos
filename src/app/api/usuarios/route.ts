@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseAdminConfigured } from "@/lib/env.server";
 import { usuarioCreateSchema } from "@/features/admin/usuario-schema";
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   if (response) return response;
   const values = data!;
 
-  const tenantId = ctx.isSuperAdmin ? values.tenant_id ?? null : ctx.tenantId;
+  const tenantId = ctx.isSuperAdmin ? (values.tenant_id ?? null) : ctx.tenantId;
   if (!tenantId) {
     return jsonError("Tenant não definido para o novo usuário.", 400);
   }
@@ -69,10 +69,7 @@ export async function POST(request: Request) {
     .eq("id", created.user.id);
 
   if (updateError) {
-    return jsonError(
-      `Usuário criado, mas falhou ao definir o perfil: ${updateError.message}`,
-      500,
-    );
+    return jsonError(`Usuário criado, mas falhou ao definir o perfil: ${updateError.message}`, 500);
   }
 
   return NextResponse.json(
