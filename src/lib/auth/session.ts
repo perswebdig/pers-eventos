@@ -3,7 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Estabelecimento, Papel, Profile } from "@/types/database";
 import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from "../../lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 import {
   type AppRole,
   homePathForRole,

@@ -1,20 +1,27 @@
-import { fileURLToPath } from "url";
-import path from "path";
+// next.config.mjs
+import withPWAInit from "@ducanh2912/next-pwa";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// PWA: gera o service worker (public/sw.js) no build e registra o shell offline.
+// Desabilitado em dev para não cachear durante o desenvolvimento.
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  // Página servida quando a navegação falha (offline) e não há cache da rota.
+  fallbacks: {
+    document: "/offline",
+  },
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
-  // Adicionada a abertura da função webpack que estava ausente
-  webpack: (config, { isServer }) => {
-    // Suas customizações do Webpack entram aqui se necessário
-    
-    return config;
-  },
 };
 
-export default nextConfig;
-
+export default withPWA(nextConfig);

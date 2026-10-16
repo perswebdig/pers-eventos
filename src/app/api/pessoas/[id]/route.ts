@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from "../../../../lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 import { pessoaPatchSchema, toPessoaPatchRow } from "@/features/pessoas/pessoa-schema";
 import { ehMenor } from "@/lib/format";
 import type { Pessoa } from "@/types/database";

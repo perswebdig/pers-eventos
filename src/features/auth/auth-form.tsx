@@ -19,7 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from "@/lib/env";
 import { APP_NAME } from "@/lib/constants";
 

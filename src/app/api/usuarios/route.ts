@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
-import { createClient } from "../../../lib/supabase/server";
-import { createAdminClient } from "../../lib/supabase/admin";
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { isSupabaseAdminConfigured } from "@/lib/env.server";
 import { usuarioCreateSchema } from "@/features/admin/usuario-schema";
 

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from "../../lib/env";
 import { slugify } from "../../features/admin/estabelecimento-schema";
 

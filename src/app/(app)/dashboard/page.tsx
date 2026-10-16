@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Users, CalendarDays, CheckCircle2, ClipboardList, TrendingUp } from "lucide-react";
 import { requireTenant } from "@/lib/auth/session";
-import { createClient } from "../../../lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

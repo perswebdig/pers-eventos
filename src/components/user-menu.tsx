@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "../lib/supabase/client";
+import { createClient } from '@/lib/supabase/client';
 import { wipeLocalDatabase } from "@/db/tenant";
 import { ROLE_LABEL, type AppRole } from "@/lib/auth/roles";
 
