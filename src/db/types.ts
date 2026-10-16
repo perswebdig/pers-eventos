@@ -4,9 +4,12 @@ import type {
   Inscricao,
   LogAcessoDados,
   Menor,
+  Order,
   Pessoa,
   SyncStatus,
   Termo,
+  Ticket,
+  TicketType,
 } from "@/types/database";
 
 // Campos que existem apenas no banco local (IndexedDB).
@@ -22,6 +25,20 @@ export type InscricaoLocal = Inscricao & LocalSyncFields;
 export type DocumentoLocal = Documento & LocalSyncFields;
 export type TermoLocal = Termo & LocalSyncFields;
 export type LogAcessoLocal = LogAcessoDados & LocalSyncFields;
+export type LoteLocal = TicketType & LocalSyncFields;
+export type OrderLocal = Order & LocalSyncFields;
+export type TicketLocal = Ticket & LocalSyncFields;
+
+// Fila local de check-ins de ingressos pendentes de envio
+// (POST /api/tenant/check-in/sync). Separada do sync_queue porque ingressos
+// são somente-leitura no pull; o check-in local é enviado por esta fila.
+export interface CheckinQueueItem {
+  id?: number;
+  ticket_id: string;
+  qr_code_hash: string;
+  checked_in_at: string;
+  created_at: string;
+}
 
 export type OperacaoSync = "insert" | "update" | "delete";
 
@@ -61,13 +78,24 @@ export interface MetaLocal {
 }
 
 export type EntidadeSync =
-  "pessoas" | "menores" | "eventos" | "inscricoes" | "documentos" | "termos" | "log_acesso_dados";
+  | "pessoas"
+  | "menores"
+  | "eventos"
+  | "ticket_types"
+  | "orders"
+  | "tickets"
+  | "inscricoes"
+  | "documentos"
+  | "termos"
+  | "log_acesso_dados";
 
 // Ordem de sincronização respeitando dependências de FK:
-// pessoas antes de menores/documentos/inscricoes; eventos antes de inscricoes.
+// pessoas antes de menores/documentos/inscricoes; eventos antes de
+// ticket_types; ticket_types antes de orders/tickets.
 export const ENTIDADES: readonly EntidadeSync[] = [
   "pessoas",
   "eventos",
+  "ticket_types",
   "menores",
   "documentos",
   "termos",
@@ -77,9 +105,15 @@ export const ENTIDADES: readonly EntidadeSync[] = [
 
 // Entidades baixadas do servidor no pull. `log_acesso_dados` é somente escrita
 // (auditoria append-only) e não possui coluna `updated_at`, então fica fora.
+// `orders` e `tickets` são criados no servidor (checkout/webhook) e apenas
+// baixados para o dispositivo; o check-in local de ingressos usa a fila
+// dedicada `checkin_queue` + rota /api/tenant/check-in/sync.
 export const ENTIDADES_PULL: readonly EntidadeSync[] = [
   "pessoas",
   "eventos",
+  "ticket_types",
+  "orders",
+  "tickets",
   "menores",
   "documentos",
   "termos",

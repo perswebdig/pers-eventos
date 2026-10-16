@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/client";
 import { useSyncStore } from "@/stores/sync-store";
 import { runSync, type SyncResult } from "./engine";
+import { flushCheckinQueue } from "./checkin-queue";
 import { createSupabaseTransport } from "./supabase-transport";
 
 const INTERVAL_MS = 30_000;
@@ -27,6 +28,10 @@ export async function syncNow(): Promise<SyncResult | null> {
   store.setSyncing(true);
   store.setError(null);
   try {
+    // Check-ins de ingressos pendentes (fila local) vão primeiro; o pull
+    // seguinte já traz o estado consolidado do servidor.
+    await flushCheckinQueue();
+
     const transport = createSupabaseTransport(createClient());
     const result = await runSync(db, transport);
     useSyncStore.getState().setResult(result);

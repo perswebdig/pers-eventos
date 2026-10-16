@@ -17,6 +17,11 @@ export type PagamentoStatus = "pendente" | "pago" | "isento" | "reembolsado";
 
 export type TermoTipo = "responsabilidade" | "imagem";
 
+// Fase 2 — financeiro e ingressos.
+export type OrderStatus = "pending" | "paid" | "canceled" | "refunded";
+
+export type PaymentMethod = "pix" | "credit_card";
+
 // Tenant (estabelecimento). Tabela raiz, sem tenant_id.
 // Nota: usamos `type` (e não `interface`) para que o objeto seja compatível
 // com `Record<string, unknown>` exigido pelos tipos do supabase-js.
@@ -94,6 +99,46 @@ export type Inscricao = {
   valor: number | null;
   forma_pagamento: string | null;
   termo_assinado: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TicketType = {
+  id: string;
+  tenant_id?: string | null;
+  event_id: string;
+  name: string;
+  price: number;
+  quantity_total: number;
+  quantity_sold: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Order = {
+  id: string;
+  tenant_id?: string | null;
+  customer_id: string;
+  event_id: string;
+  ticket_type_id: string;
+  quantity: number;
+  total_amount: number;
+  status: OrderStatus;
+  payment_method: PaymentMethod;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Ticket = {
+  id: string;
+  tenant_id?: string | null;
+  order_id: string;
+  ticket_type_id: string;
+  customer_id: string;
+  qr_code_hash: string;
+  is_checked_in: boolean;
+  checked_in_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -189,6 +234,34 @@ export interface Database {
         Partial<Evento>,
         [Rel<"tenant_id", "estabelecimentos">]
       >;
+      ticket_types: Table<
+        TicketType,
+        Partial<TicketType>,
+        Partial<TicketType>,
+        [Rel<"event_id", "eventos">, Rel<"tenant_id", "estabelecimentos">]
+      >;
+      orders: Table<
+        Order,
+        Partial<Order>,
+        Partial<Order>,
+        [
+          Rel<"customer_id", "pessoas">,
+          Rel<"event_id", "eventos">,
+          Rel<"ticket_type_id", "ticket_types">,
+          Rel<"tenant_id", "estabelecimentos">,
+        ]
+      >;
+      tickets: Table<
+        Ticket,
+        Partial<Ticket>,
+        Partial<Ticket>,
+        [
+          Rel<"order_id", "orders">,
+          Rel<"ticket_type_id", "ticket_types">,
+          Rel<"customer_id", "pessoas">,
+          Rel<"tenant_id", "estabelecimentos">,
+        ]
+      >;
       inscricoes: Table<
         Inscricao,
         Partial<Inscricao>,
@@ -229,13 +302,20 @@ export interface Database {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      confirm_order_payment: {
+        Args: { p_order_id: string; p_hashes: string[] };
+        Returns: Order;
+      };
+    };
     Enums: {
       sync_status: SyncStatus;
       papel: Papel;
       inscricao_status: InscricaoStatus;
       pagamento_status: PagamentoStatus;
       termo_tipo: TermoTipo;
+      order_status: OrderStatus;
+      payment_method: PaymentMethod;
     };
   };
 }

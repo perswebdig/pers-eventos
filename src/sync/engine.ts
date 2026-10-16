@@ -134,7 +134,11 @@ async function applyRemoteRow(
     .equals([entidade, id])
     .count();
 
-  if (pendentes > 0) {
+  // Registros marcados como pendentes fora do sync_queue (ex.: check-in local
+  // de ingressos, enviado pela fila `checkin_queue`) também são protegidos.
+  const pendenteLocal = local?.sync_status === "pending";
+
+  if (pendentes > 0 || pendenteLocal) {
     // Regra de ouro: pendente local NUNCA é sobrescrito pelo remoto.
     if (local && String(remote.updated_at) > String(local.updated_at)) {
       await table.update(id, { sync_status: "conflict" });
