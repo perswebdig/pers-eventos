@@ -5,13 +5,14 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { CheckCircle2, Clock, Ticket } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge, type StatusTone } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { encodeIngressoQr } from "@/features/checkin/qr";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { cn } from "cn";
 import type { Evento, Order, Ticket as TicketRow, TicketType } from "@/types/database";
 
 type PedidoCompleto = Order & {
@@ -27,11 +28,11 @@ const STATUS_LABEL: Record<string, string> = {
   refunded: "Reembolsado",
 };
 
-const STATUS_TONE: Record<string, string> = {
-  pending: "border-amber-500/40 text-amber-600 dark:text-amber-500",
-  paid: "border-success/30 text-success",
-  canceled: "border-muted-foreground/30 text-muted-foreground",
-  refunded: "border-blue-500/30 text-blue-600 dark:text-blue-400",
+const STATUS_TONE: Record<string, StatusTone> = {
+  pending: "warning",
+  paid: "success",
+  canceled: "neutral",
+  refunded: "info",
 };
 
 export function PortalIngressos() {
@@ -77,66 +78,73 @@ export function PortalIngressos() {
 
   return (
     <div className="space-y-4">
-      {pedidos.map((pedido) => (
-        <Card key={pedido.id}>
-          <CardHeader className="pb-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Ticket className="size-4" />
-                {pedido.evento?.nome ?? "Evento"}
-              </CardTitle>
-              <Badge variant="outline" className={STATUS_TONE[pedido.status] ?? ""}>
-                {STATUS_LABEL[pedido.status] ?? pedido.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {pedido.ticket_type?.name ?? "Lote"} · {pedido.quantity} ingresso(s) ·{" "}
-              {formatCurrency(Number(pedido.total_amount))}
-            </p>
-          </CardHeader>
-          <CardContent>
-            {pedido.status !== "paid" || pedido.tickets.length === 0 ? (
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="size-3.5" />
-                {pedido.status === "pending"
-                  ? "Os QR Codes aparecem aqui após a confirmação do pagamento."
-                  : "Sem ingressos para este pedido."}
-              </p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {pedido.tickets.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex flex-col items-center gap-2 rounded-lg border p-3"
-                  >
-                    <div className="rounded-lg bg-white p-3 shadow">
-                      <QRCodeSVG value={encodeIngressoQr(t.qr_code_hash)} size={156} />
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        t.is_checked_in ? "border-success/30 text-success" : "text-muted-foreground"
-                      }
-                    >
-                      {t.is_checked_in ? (
-                        <>
-                          <CheckCircle2 className="size-3" /> Utilizado em{" "}
-                          {formatDateTime(t.checked_in_at)}
-                        </>
-                      ) : (
-                        "Válido para check-in"
-                      )}
-                    </Badge>
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      {t.qr_code_hash.slice(0, 16)}…
-                    </p>
-                  </div>
-                ))}
+      {pedidos.map((pedido) => {
+        const pago = pedido.status === "paid";
+        return (
+          <Card key={pedido.id} className="overflow-hidden">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Ticket className="size-4 text-primary" />
+                  {pedido.evento?.nome ?? "Evento"}
+                </CardTitle>
+                <StatusBadge tone={STATUS_TONE[pedido.status] ?? "neutral"}>
+                  {STATUS_LABEL[pedido.status] ?? pedido.status}
+                </StatusBadge>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              <p className="text-xs text-muted-foreground">
+                {pedido.ticket_type?.name ?? "Lote"} · {pedido.quantity} ingresso(s) ·{" "}
+                {formatCurrency(Number(pedido.total_amount))}
+                {pedido.evento?.data_inicio
+                  ? ` · ${new Date(pedido.evento.data_inicio).toLocaleDateString("pt-BR")}`
+                  : ""}
+              </p>
+            </CardHeader>
+
+            <div className="p-4">
+              {!pago || pedido.tickets.length === 0 ? (
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="size-3.5" />
+                  {pedido.status === "pending"
+                    ? "Os QR Codes aparecem aqui após a confirmação do pagamento."
+                    : "Sem ingressos para este pedido."}
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {pedido.tickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className={cn(
+                        "relative overflow-hidden rounded-xl border border-l-4 bg-card p-4",
+                        ticket.is_checked_in ? "border-l-warning" : "border-l-success",
+                      )}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="rounded-lg bg-white p-3 shadow-sm">
+                          <QRCodeSVG value={encodeIngressoQr(ticket.qr_code_hash)} size={156} />
+                        </div>
+                        <StatusBadge tone={ticket.is_checked_in ? "warning" : "success"}>
+                          {ticket.is_checked_in ? (
+                            <>
+                              <CheckCircle2 className="size-3" /> Utilizado em{" "}
+                              {formatDateTime(ticket.checked_in_at)}
+                            </>
+                          ) : (
+                            "Válido para check-in"
+                          )}
+                        </StatusBadge>
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {ticket.qr_code_hash.slice(0, 16)}…
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
 
       <div className="flex justify-center">
         <Button

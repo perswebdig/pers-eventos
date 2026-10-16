@@ -3,21 +3,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CalendarDays, CheckCircle2, CreditCard, MapPin, QrCode, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  CreditCard,
+  MapPin,
+  Minus,
+  Plus,
+  QrCode,
+  Ticket,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { cn } from "cn";
 import type { Evento, Order, TicketType } from "@/types/database";
 
 type EventoComLotes = { evento: Evento; lotes: TicketType[] };
@@ -62,6 +66,7 @@ export function PortalCheckout() {
 
   const lote = dados?.lotes.find((l) => l.id === loteId) ?? null;
   const disponivel = lote ? Math.max(0, lote.quantity_total - lote.quantity_sold) : 0;
+  const maxQtd = Math.min(10, Math.max(1, disponivel));
   const qtd = Math.min(Math.max(1, Number(quantidade) || 1), Math.min(10, disponivel || 1));
   const total = lote ? Math.round(Number(lote.price) * qtd * 100) / 100 : 0;
 
@@ -123,25 +128,35 @@ export function PortalCheckout() {
   if (pedido) {
     return (
       <Card className="border-success/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-success">
-            <CheckCircle2 className="size-5" /> Pedido registrado
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            {pedido.quantity} ingresso(s) para <strong>{dados.evento.nome}</strong> ·{" "}
-            {formatCurrency(Number(pedido.total_amount))} via{" "}
-            {PAGAMENTO_LABEL[pedido.payment_method]}
+        <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-success/12 text-success ring-1 ring-success/25">
+            <CheckCircle2 className="size-7" />
+          </span>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Pedido registrado!</h2>
+            <p className="text-sm text-muted-foreground">
+              {pedido.quantity} ingresso(s) para <strong>{dados.evento.nome}</strong>
+            </p>
+          </div>
+          <div className="w-full max-w-sm space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-semibold">{formatCurrency(Number(pedido.total_amount))}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Pagamento</span>
+              <span>{PAGAMENTO_LABEL[pedido.payment_method] ?? pedido.payment_method}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Status</span>
+              <StatusBadge tone="warning">Aguardando pagamento</StatusBadge>
+            </div>
+          </div>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            O pagamento é confirmado pelo estabelecimento. Após a confirmação, seus QR Codes de
+            check-in aparecerão em <strong>Meus Ingressos</strong>.
           </p>
-          <p className="text-muted-foreground">
-            Status: <Badge variant="outline">Aguardando pagamento</Badge>
-          </p>
-          <p className="text-muted-foreground">
-            Após a confirmação do pagamento, seus ingressos aparecerão em{" "}
-            <strong>Meus Ingressos</strong> com o QR Code para check-in.
-          </p>
-          <div className="flex gap-2 pt-1">
+          <div className="flex flex-wrap justify-center gap-2">
             <Button render={<Link href="/portal/ingressos">Ver meus ingressos</Link>}>
               Ver meus ingressos
             </Button>
@@ -154,10 +169,25 @@ export function PortalCheckout() {
     );
   }
 
+  const temLotes = dados.lotes.length > 0;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-40 sm:pb-0">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2 text-muted-foreground"
+        render={
+          <Link href="/portal/eventos">
+            <ArrowLeft className="size-4" /> Voltar aos eventos
+          </Link>
+        }
+      >
+        Voltar aos eventos
+      </Button>
+
       <Card>
-        <CardContent className="pt-6 space-y-1">
+        <CardContent className="space-y-1.5 pt-6">
           <h1 className="text-lg font-semibold">{dados.evento.nome}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
@@ -177,72 +207,102 @@ export function PortalCheckout() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Ticket className="size-4" /> Escolha seu ingresso
+            <Ticket className="size-4 text-primary" /> Escolha seu ingresso
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          {dados.lotes.length === 0 ? (
+          {!temLotes ? (
             <p className="text-sm text-muted-foreground">
               Este evento ainda não tem ingressos à venda. Volte em breve!
             </p>
           ) : (
             <>
-              <div className="grid gap-1.5">
-                <Label htmlFor="lote">Lote</Label>
-                <Select value={loteId} onValueChange={(v) => setLoteId(v as string)}>
-                  <SelectTrigger id="lote" className="w-full">
-                    <SelectValue placeholder="Selecione o lote…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dados.lotes.map((l) => {
-                      const disp = Math.max(0, l.quantity_total - l.quantity_sold);
-                      return (
-                        <SelectItem key={l.id} value={l.id} disabled={disp === 0}>
-                          {l.name} — {formatCurrency(Number(l.price))}
-                          {disp === 0 ? " (esgotado)" : ` (${disp} disponíveis)`}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+              <div role="radiogroup" aria-label="Lote" className="grid gap-2">
+                {dados.lotes.map((l) => {
+                  const disp = Math.max(0, l.quantity_total - l.quantity_sold);
+                  const esgotado = disp === 0;
+                  const selecionado = l.id === loteId;
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selecionado}
+                      disabled={esgotado}
+                      onClick={() => {
+                        setLoteId(l.id);
+                        setQuantidade("1");
+                      }}
+                      className={cn(
+                        "flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
+                        selecionado
+                          ? "border-primary/50 bg-primary/8 ring-1 ring-primary/30"
+                          : "hover:border-primary/30 hover:bg-muted/50",
+                        esgotado && "cursor-not-allowed opacity-50",
+                      )}
+                    >
+                      <span className="space-y-0.5">
+                        <span className="block text-sm font-medium">{l.name}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {esgotado ? "Esgotado" : `${disp} disponível(is)`}
+                        </span>
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {formatCurrency(Number(l.price))}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="grid gap-1.5">
-                <Label htmlFor="quantidade">Quantidade</Label>
-                <Select value={String(qtd)} onValueChange={(v) => setQuantidade(v as string)}>
-                  <SelectTrigger id="quantidade" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from(
-                      { length: Math.min(10, Math.max(1, disponivel)) },
-                      (_, i) => i + 1,
-                    ).map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <Label>Quantidade</Label>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Diminuir quantidade"
+                      disabled={qtd <= 1}
+                      onClick={() => setQuantidade(String(qtd - 1))}
+                    >
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="w-8 text-center text-lg font-semibold tabular-nums">
+                      {qtd}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Aumentar quantidade"
+                      disabled={qtd >= maxQtd}
+                      onClick={() => setQuantidade(String(qtd + 1))}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                </div>
 
-              <div className="grid gap-1.5">
-                <Label>Forma de pagamento</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={pagamento === "pix" ? "default" : "outline"}
-                    onClick={() => setPagamento("pix")}
-                  >
-                    <QrCode className="size-4" /> Pix
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={pagamento === "credit_card" ? "default" : "outline"}
-                    onClick={() => setPagamento("credit_card")}
-                  >
-                    <CreditCard className="size-4" /> Cartão
-                  </Button>
+                <div className="grid gap-1.5">
+                  <Label>Forma de pagamento</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={pagamento === "pix" ? "default" : "outline"}
+                      onClick={() => setPagamento("pix")}
+                    >
+                      <QrCode className="size-4" /> Pix
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={pagamento === "credit_card" ? "default" : "outline"}
+                      onClick={() => setPagamento("credit_card")}
+                    >
+                      <CreditCard className="size-4" /> Cartão
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -255,14 +315,6 @@ export function PortalCheckout() {
                 </div>
               </div>
 
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleComprar}
-                disabled={enviando || !lote || disponivel === 0}
-              >
-                {enviando ? "Processando…" : "Confirmar pedido"}
-              </Button>
               <p className="text-xs text-muted-foreground">
                 O pagamento é confirmado pelo estabelecimento. Seus ingressos ficam disponíveis em
                 &quot;Meus Ingressos&quot; após a confirmação.
@@ -271,6 +323,26 @@ export function PortalCheckout() {
           )}
         </CardContent>
       </Card>
+
+      {temLotes ? (
+        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-background/95 p-4 backdrop-blur md:sticky md:bottom-4 md:inset-x-auto md:rounded-xl md:border md:p-4">
+          <div className="mx-auto flex max-w-3xl items-center gap-3 md:max-w-none">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">
+                Total · {qtd} ingresso(s) · {PAGAMENTO_LABEL[pagamento]}
+              </p>
+              <p className="text-lg font-semibold tabular-nums">{formatCurrency(total)}</p>
+            </div>
+            <Button
+              size="lg"
+              onClick={handleComprar}
+              disabled={enviando || !lote || disponivel === 0}
+            >
+              {enviando ? "Processando…" : "Confirmar pedido"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { FileText, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TERMO_TIPO, termoTexto, type TermoTipo } from "@/features/termos/termo-schema";
 import type { Termo } from "@/types/database";
@@ -69,9 +69,9 @@ export function PortalTermos() {
                 <p className="line-clamp-2 text-xs text-muted-foreground">{termoTexto[tipo]}</p>
               </div>
               {aceito ? (
-                <Badge variant="outline" className="shrink-0 border-success/30 text-success">
-                  <ShieldCheck className="mr-1 size-3.5" /> Aceito
-                </Badge>
+                <StatusBadge tone="success">
+                  <ShieldCheck className="size-3.5" /> Aceito
+                </StatusBadge>
               ) : (
                 <Button
                   size="sm"
