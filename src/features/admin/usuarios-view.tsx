@@ -247,7 +247,7 @@ export function UsuariosView() {
                           variant="outline"
                           className={
                             u.ativo
-                              ? "border-green-600/30 text-green-700 dark:text-green-500"
+                              ? "border-success/30 text-success"
                               : "border-muted-foreground/30 text-muted-foreground"
                           }
                         >

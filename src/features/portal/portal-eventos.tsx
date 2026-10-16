@@ -119,10 +119,7 @@ export function PortalEventos() {
                     Comprar
                   </Button>
                   {jaInscrito ? (
-                    <Badge
-                      variant="outline"
-                      className="border-green-600/30 text-green-700 dark:text-green-500"
-                    >
+                    <Badge variant="outline" className="border-success/30 text-success">
                       Inscrito
                     </Badge>
                   ) : (

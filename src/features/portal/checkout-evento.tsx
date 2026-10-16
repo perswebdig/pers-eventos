@@ -122,9 +122,9 @@ export function PortalCheckout() {
 
   if (pedido) {
     return (
-      <Card className="border-green-600/30">
+      <Card className="border-success/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-500">
+          <CardTitle className="flex items-center gap-2 text-success">
             <CheckCircle2 className="size-5" /> Pedido registrado
           </CardTitle>
         </CardHeader>

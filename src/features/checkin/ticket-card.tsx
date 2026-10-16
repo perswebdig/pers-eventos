@@ -3,10 +3,11 @@
 import { CheckCircle2, Ticket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/status-badge";
 import type { TicketDetalhe } from "@/db/repos/ingressos";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { cn } from "cn";
 
 // Cartão de conferência de um ingresso (QR "PERS2:<hash>").
 // O check-in é registrado localmente (Dexie) e sincronizado depois.
@@ -24,33 +25,26 @@ export function TicketActionCard({
 
   return (
     <Card
-      className={
-        usado
-          ? "relative overflow-hidden border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20"
-          : "relative overflow-hidden border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20"
-      }
+      className={cn(
+        "relative gap-2 overflow-hidden border-l-4 p-4",
+        usado ? "border-l-warning" : "border-l-success",
+      )}
     >
       <Button
         variant="ghost"
         size="icon"
         className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
         onClick={onClose}
+        aria-label="Fechar"
       >
         <X className="size-4" />
       </Button>
       <div className="grid gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-lg font-semibold">{pessoa?.nome_completo ?? "—"}</h3>
-          <Badge
-            variant="outline"
-            className={
-              usado
-                ? "border-amber-500/40 text-amber-700 dark:text-amber-500"
-                : "border-green-600/30 text-green-700 dark:text-green-500"
-            }
-          >
+        <div className="flex items-center justify-between gap-2 pr-8">
+          <h3 className="truncate text-lg font-semibold">{pessoa?.nome_completo ?? "—"}</h3>
+          <StatusBadge tone={usado ? "warning" : "success"}>
             {usado ? "Já utilizado" : "Válido"}
-          </Badge>
+          </StatusBadge>
         </div>
         {pessoa?.cpf ? <p className="text-sm text-muted-foreground">CPF: {pessoa.cpf}</p> : null}
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -69,10 +63,11 @@ export function TicketActionCard({
           </p>
         ) : (
           <Button
-            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+            className="w-full bg-success text-success-foreground hover:bg-success/90"
             onClick={() => onCheckin(ticket.id)}
           >
-            <CheckCircle2 className="size-4" /> Fazer check-in
+            <CheckCircle2 className="size-5" /> Liberar entrada
           </Button>
         )}
       </div>

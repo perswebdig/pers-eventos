@@ -6,7 +6,10 @@ export default async function PortalLayout({ children }: Readonly<{ children: Re
   return (
     <div className="flex min-h-dvh flex-col">
       <AppHeader email={ctx.email} role={ctx.role} />
-      <main id="main-content" className="flex-1 pt-1">
+      <main
+        id="main-content"
+        className="flex-1 pt-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+      >
         {children}
       </main>
     </div>

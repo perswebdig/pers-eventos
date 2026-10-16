@@ -29,7 +29,7 @@ export function SyncStatusChip() {
     if (pendingCount > 0) {
       return { icon: RefreshCw, label: `${pendingCount} pendente(s)`, tone: "text-amber-600" };
     }
-    return { icon: CheckCircle2, label: "Sincronizado", tone: "text-green-600" };
+    return { icon: CheckCircle2, label: "Sincronizado", tone: "text-success" };
   })();
 
   return (

@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_TONE: Record<string, string> = {
   pending: "border-amber-500/40 text-amber-600 dark:text-amber-500",
-  paid: "border-green-600/30 text-green-700 dark:text-green-500",
+  paid: "border-success/30 text-success",
   canceled: "border-muted-foreground/30 text-muted-foreground",
   refunded: "border-blue-500/30 text-blue-600 dark:text-blue-400",
 };
@@ -115,9 +115,7 @@ export function PortalIngressos() {
                     <Badge
                       variant="outline"
                       className={
-                        t.is_checked_in
-                          ? "border-green-600/30 text-green-700 dark:text-green-500"
-                          : "text-muted-foreground"
+                        t.is_checked_in ? "border-success/30 text-success" : "text-muted-foreground"
                       }
                     >
                       {t.is_checked_in ? (

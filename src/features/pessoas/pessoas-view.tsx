@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Database, Plus, Search, UserPlus, Users, RefreshCw } from "lucide-react";
+import { Database, Plus, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -16,16 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
+import { Toolbar, ToolbarSearch } from "@/components/toolbar";
 import { SyncStatusBadge } from "@/components/sync-status-badge";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
 import { PessoaForm } from "./pessoa-form";
@@ -63,6 +57,17 @@ async function fetchServerPessoas(): Promise<PessoaComSync[]> {
   }
 }
 
+function PessoaIdentidade({ pessoa }: { pessoa: PessoaComSync }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-sm font-medium text-primary">
+        {pessoa.nome_completo.slice(0, 1).toUpperCase()}
+      </div>
+      <span className="truncate font-medium">{pessoa.nome_completo}</span>
+    </div>
+  );
+}
+
 export function PessoasView() {
   const [termo, setTermo] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -75,7 +80,6 @@ export function PessoasView() {
   const [atualizando, setAtualizando] = useState(false);
 
   const pessoasLocal = useLiveQuery(() => listPessoas(), []);
-  const pessoasServer = useMemo(() => (usarLocal ? [] : undefined), [usarLocal]);
 
   const [pessoasCombinadas, setPessoasCombinadas] = useState<PessoaComSync[] | null>(null);
 
@@ -164,6 +168,11 @@ export function PessoasView() {
     setFormOpen(true);
   }
 
+  function abrirDetalhe(id: string) {
+    setDetailId(id);
+    setDetailOpen(true);
+  }
+
   async function handleSubmit(values: PessoaFormValues) {
     const id = await savePessoa(values, editingId ?? undefined);
     toast.success(editingId ? "Pessoa atualizada" : "Pessoa cadastrada", {
@@ -191,104 +200,124 @@ export function PessoasView() {
 
   const carregando = pessoasCombinadas === null && !usarLocal;
   const carregandoLocal = pessoasLocal === undefined;
+  const lista = filtradas ?? [];
+  const vazioSemBusca = !carregando && !carregandoLocal && lista.length === 0 && !termo;
+
+  const columns: DataTableColumn<PessoaComSync>[] = [
+    {
+      key: "pessoa",
+      header: "Pessoa",
+      cell: (pessoa) => <PessoaIdentidade pessoa={pessoa} />,
+    },
+    {
+      key: "cpf",
+      header: "CPF",
+      cell: (pessoa) =>
+        pessoa.cpf ? (
+          <span className="tabular-nums">{formatCpf(pessoa.cpf)}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "telefone",
+      header: "Telefone",
+      cell: (pessoa) =>
+        pessoa.telefone ? (
+          <span className="tabular-nums">{formatTelefone(pessoa.telefone)}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "sync",
+      header: "Sync",
+      align: "right",
+      cell: (pessoa) => (
+        <SyncStatusBadge status={pessoa.sync_status ?? "synced"} withLabel={false} />
+      ),
+    },
+  ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">Pessoas</h1>
-          <p className="text-sm text-muted-foreground">
-            {carregando || carregandoLocal
-              ? "Carregando…"
-              : `${filtradas?.length ?? 0} registro(s)`}
-            {usarLocal && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                Offline
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={recarregar}
-            disabled={atualizando}
-            aria-label="Recarregar do servidor"
-          >
-            <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
-          </Button>
-          <Button onClick={abrirCriacao}>
-            <Plus className="size-4" /> Nova
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Pessoas"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {carregando || carregandoLocal ? "Carregando…" : `${lista.length} registro(s)`}
+            {usarLocal ? <StatusBadge tone="warning">Offline</StatusBadge> : null}
+          </span>
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={recarregar}
+              disabled={atualizando}
+              aria-label="Recarregar do servidor"
+            >
+              <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
+            </Button>
+            <Button onClick={abrirCriacao}>
+              <Plus className="size-4" /> Nova
+            </Button>
+          </>
+        }
+      />
 
-      <div className="relative mb-4">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <Toolbar className="mb-4">
+        <ToolbarSearch
           value={termo}
-          onChange={(e) => setTermo(e.target.value)}
+          onValueChange={setTermo}
           placeholder="Buscar por nome, CPF ou telefone"
-          className="pl-8"
-          aria-label="Buscar pessoas"
         />
-      </div>
+      </Toolbar>
 
       {carregando ? (
         <LoadingSkeleton count={3} />
-      ) : filtradas && filtradas.length > 0 ? (
-        <ul className="space-y-2">
-          {filtradas.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailId(p.id);
-                  setDetailOpen(true);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                  {p.nome_completo.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.nome_completo}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {[
-                      p.cpf ? formatCpf(p.cpf) : null,
-                      p.telefone ? formatTelefone(p.telefone) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "Sem CPF/telefone"}
-                  </p>
-                </div>
-                <SyncStatusBadge status={p.sync_status ?? "synced"} withLabel={false} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
+      ) : vazioSemBusca ? (
         <EmptyState
-          icon={termo ? "search" : "users"}
-          title={termo ? "Nenhum resultado" : "Nenhuma pessoa cadastrada"}
-          description={
-            termo
-              ? "Tente outro nome, CPF ou telefone."
-              : "Cadastre a primeira pessoa ou carregue dados de exemplo."
-          }
+          icon="users"
+          title="Nenhuma pessoa cadastrada"
+          description="Cadastre a primeira pessoa ou carregue dados de exemplo."
           actions={
-            !termo ? (
-              <>
-                <Button onClick={abrirCriacao}>
-                  <UserPlus className="size-4" /> Cadastrar
-                </Button>
-                <Button variant="outline" onClick={handleSeed}>
-                  <Database className="size-4" /> Dados de exemplo
-                </Button>
-              </>
-            ) : null
+            <>
+              <Button onClick={abrirCriacao}>
+                <UserPlus className="size-4" /> Cadastrar
+              </Button>
+              <Button variant="outline" onClick={handleSeed}>
+                <Database className="size-4" /> Dados de exemplo
+              </Button>
+            </>
           }
+        />
+      ) : (
+        <DataTable
+          rows={lista}
+          columns={columns}
+          onRowClick={(pessoa) => abrirDetalhe(pessoa.id)}
+          empty="Nenhum resultado para a busca."
+          renderMobile={(pessoa) => (
+            <div className="flex items-center gap-3 p-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/12 text-sm font-medium text-primary">
+                {pessoa.nome_completo.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{pessoa.nome_completo}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {[
+                    pessoa.cpf ? formatCpf(pessoa.cpf) : null,
+                    pessoa.telefone ? formatTelefone(pessoa.telefone) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Sem CPF/telefone"}
+                </p>
+              </div>
+              <SyncStatusBadge status={pessoa.sync_status ?? "synced"} withLabel={false} />
+            </div>
+          )}
         />
       )}
 
@@ -331,26 +360,17 @@ export function PessoasView() {
         onDelete={(id) => setDeleteId(id)}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => {
           if (!open) setDeleteId(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir pessoa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação remove a pessoa e seus dados relacionados neste dispositivo e, quando houver
-              conexão, no servidor. Não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        title="Excluir pessoa?"
+        description="Esta ação remove a pessoa e seus dados relacionados neste dispositivo e, quando houver conexão, no servidor. Não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={handleDelete}
+      />
+    </PageContainer>
   );
 }

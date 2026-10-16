@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { CalendarDays, Database, MapPin, Plus, Search, Users } from "lucide-react";
+import { CalendarDays, Database, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -17,16 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge, type StatusTone } from "@/components/status-badge";
+import { Toolbar, ToolbarSearch } from "@/components/toolbar";
 import { EventoForm } from "./evento-form";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
 import { eventoStatusLabel, toEventoFormValues, type EventoFormValues } from "./evento-schema";
@@ -40,13 +33,14 @@ import {
 } from "@/db/repos/eventos";
 import { seedLocalDatabase } from "@/db/seed";
 import { formatDate } from "@/lib/format";
+import { cn } from "cn";
 
-const STATUS_TONE: Record<string, string> = {
-  planejado: "border-blue-600/30 text-blue-700 dark:text-blue-400",
-  aberto: "border-green-600/30 text-green-700 dark:text-green-500",
-  lotado: "border-amber-600/30 text-amber-700 dark:text-amber-500",
-  realizado: "border-muted-foreground/30 text-muted-foreground",
-  cancelado: "border-destructive/30 text-destructive",
+const STATUS_TONE: Record<string, StatusTone> = {
+  planejado: "info",
+  aberto: "success",
+  lotado: "warning",
+  realizado: "neutral",
+  cancelado: "danger",
 };
 
 const EventoDetailSheetLazy = dynamic(
@@ -103,6 +97,11 @@ export function EventosView() {
     setFormOpen(true);
   }
 
+  function abrirDetalhe(id: string) {
+    setDetailId(id);
+    setDetailOpen(true);
+  }
+
   async function handleSubmit(values: EventoFormValues) {
     const id = await saveEvento(values, editingId ?? undefined);
     toast.success(editingId ? "Evento atualizado" : "Evento criado", {
@@ -129,101 +128,124 @@ export function EventosView() {
   }
 
   const carregando = eventos === undefined;
+  const lista = filtrados ?? [];
+  const vazioSemBusca = !carregando && lista.length === 0 && !termo;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">Eventos</h1>
-          <p className="text-sm text-muted-foreground">
-            {carregando ? "Carregando…" : `${filtrados?.length ?? 0} evento(s)`}
-          </p>
-        </div>
-        <Button onClick={abrirCriacao}>
-          <Plus className="size-4" /> Novo
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Eventos"
+        description={carregando ? "Carregando…" : `${lista.length} evento(s)`}
+        actions={
+          <Button onClick={abrirCriacao}>
+            <Plus className="size-4" /> Novo
+          </Button>
+        }
+      />
 
-      <div className="relative mb-4">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <Toolbar className="mb-4">
+        <ToolbarSearch
           value={termo}
-          onChange={(e) => setTermo(e.target.value)}
+          onValueChange={setTermo}
           placeholder="Buscar por nome, local ou status"
-          className="pl-8"
-          aria-label="Buscar eventos"
         />
-      </div>
+      </Toolbar>
 
       {carregando ? (
         <LoadingSkeleton count={2} />
-      ) : filtrados && filtrados.length > 0 ? (
-        <ul className="space-y-2">
-          {filtrados.map((e) => {
-            const total = counts?.get(e.id) ?? 0;
-            const cheio = e.capacidade !== null && total >= e.capacidade;
+      ) : vazioSemBusca ? (
+        <EmptyState
+          icon="calendar"
+          title="Nenhum evento cadastrado"
+          description="Crie o primeiro evento ou carregue dados de exemplo."
+          actions={
+            <>
+              <Button onClick={abrirCriacao}>
+                <Plus className="size-4" /> Criar evento
+              </Button>
+              <Button variant="outline" onClick={handleSeed}>
+                <Database className="size-4" /> Dados de exemplo
+              </Button>
+            </>
+          }
+        />
+      ) : lista.length === 0 ? (
+        <EmptyState
+          icon="search"
+          title="Nenhum resultado"
+          description="Tente outro nome, local ou status."
+        />
+      ) : (
+        <ul className="grid gap-3 md:grid-cols-2">
+          {lista.map((evento) => {
+            const total = counts?.get(evento.id) ?? 0;
+            const cheio = evento.capacidade !== null && total >= evento.capacidade;
+            const pct =
+              evento.capacidade && evento.capacidade > 0
+                ? Math.min(100, Math.round((total / evento.capacidade) * 100))
+                : null;
             return (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDetailId(e.id);
-                    setDetailOpen(true);
+              <li key={evento.id}>
+                <Card
+                  className="h-full cursor-pointer gap-3 p-4 transition-colors hover:ring-primary/30"
+                  onClick={() => abrirDetalhe(evento.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") abrirDetalhe(evento.id);
                   }}
-                  className="w-full rounded-xl border bg-card p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{e.nome}</p>
-                    <Badge variant="outline" className={STATUS_TONE[e.status] ?? ""}>
-                      {eventoStatusLabel(e.status)}
-                    </Badge>
+                    <p className="font-medium">{evento.nome}</p>
+                    <StatusBadge tone={STATUS_TONE[evento.status] ?? "neutral"}>
+                      {eventoStatusLabel(evento.status)}
+                    </StatusBadge>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <CalendarDays className="size-3.5" />
-                      {formatDate(e.data_inicio)}
-                      {e.data_fim ? ` – ${formatDate(e.data_fim)}` : ""}
+                      {formatDate(evento.data_inicio)}
+                      {evento.data_fim ? ` – ${formatDate(evento.data_fim)}` : ""}
                     </span>
-                    {e.local ? (
+                    {evento.local ? (
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="size-3.5" />
-                        {e.local}
+                        {evento.local}
                       </span>
                     ) : null}
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="size-3.5" />
-                      {total}
-                      {e.capacidade !== null ? `/${e.capacidade}` : ""}
-                      {cheio ? " · lotado" : ""}
-                    </span>
                   </div>
-                </button>
+
+                  <div className="mt-auto space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                        <Users className="size-3.5" />
+                        {total}
+                        {evento.capacidade !== null ? `/${evento.capacidade}` : ""} inscrito(s)
+                      </span>
+                      {cheio ? (
+                        <span className="font-medium text-warning">Lotado</span>
+                      ) : pct !== null ? (
+                        <span className="tabular-nums text-muted-foreground">{pct}%</span>
+                      ) : null}
+                    </div>
+                    {pct !== null ? (
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            cheio ? "bg-warning" : "bg-primary",
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </Card>
               </li>
             );
           })}
         </ul>
-      ) : (
-        <EmptyState
-          icon={termo ? "search" : "calendar"}
-          title={termo ? "Nenhum resultado" : "Nenhum evento cadastrado"}
-          description={
-            termo
-              ? "Tente outro nome, local ou status."
-              : "Crie o primeiro evento ou carregue dados de exemplo."
-          }
-          actions={
-            !termo ? (
-              <>
-                <Button onClick={abrirCriacao}>
-                  <Plus className="size-4" /> Criar evento
-                </Button>
-                <Button variant="outline" onClick={handleSeed}>
-                  <Database className="size-4" /> Dados de exemplo
-                </Button>
-              </>
-            ) : null
-          }
-        />
       )}
 
       <Dialog
@@ -265,26 +287,17 @@ export function EventosView() {
         onDelete={(id: string) => setDeleteId(id)}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => {
           if (!open) setDeleteId(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação remove o evento, suas inscrições e termos relacionados neste dispositivo e,
-              quando houver conexão, no servidor. Não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        title="Excluir evento?"
+        description="Esta ação remove o evento, suas inscrições e termos relacionados neste dispositivo e, quando houver conexão, no servidor. Não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={handleDelete}
+      />
+    </PageContainer>
   );
 }

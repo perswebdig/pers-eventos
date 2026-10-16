@@ -229,9 +229,9 @@ function OnboardingContent() {
                   <div
                     className={`flex size-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
                       i + 1 < etapa
-                        ? "bg-green-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : i + 1 === etapa
-                          ? "bg-green-600 text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -430,7 +430,7 @@ function OnboardingContent() {
 
           {etapa === 4 && (
             <form onSubmit={handleSubmit(onSubmitEtapa2)} className="grid gap-4 text-center">
-              <div className="flex items-center justify-center gap-2 text-green-600">
+              <div className="flex items-center justify-center gap-2 text-success">
                 <CheckCircle2 className="size-6" />
                 <h3 className="text-lg font-medium">Tudo pronto!</h3>
               </div>
@@ -440,7 +440,7 @@ function OnboardingContent() {
               <Button
                 type="submit"
                 disabled={salvando}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-primary hover:bg-primary/90"
               >
                 {salvando ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
                 Finalizar e ir para o painel

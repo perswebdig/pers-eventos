@@ -27,7 +27,10 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         role={ctx?.role ?? "staff"}
         tenantName={ctx?.estabelecimento?.nome ?? null}
       />
-      <main id="main-content" className="flex-1 pt-1">
+      <main
+        id="main-content"
+        className="flex-1 pt-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+      >
         {children}
       </main>
     </div>

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Leaf, Loader2 } from "lucide-react";
+import { Loader2, Orbit } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -141,8 +141,8 @@ export function AuthForm() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-green-700 text-white">
-          <Leaf className="size-5" aria-hidden />
+        <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/12 text-primary ring-1 ring-primary/20">
+          <Orbit className="size-5" aria-hidden />
         </div>
         <CardTitle>Entrar no {APP_NAME}</CardTitle>
         <CardDescription>

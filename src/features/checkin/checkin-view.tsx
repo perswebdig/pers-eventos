@@ -3,23 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import {
-  ScanLine,
-  Search,
-  CheckCircle2,
-  LogOut,
-  RotateCcw,
-  X,
-  Circle,
-  AlertCircle,
-} from "lucide-react";
+import { ScanLine, CheckCircle2, LogOut, RotateCcw, X, Circle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -28,7 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge, type StatusTone } from "@/components/status-badge";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
+import {
+  ScanFeedback,
+  playScanBeep,
+  vibrateScan,
+  type ScanFeedbackData,
+  type ScanFeedbackKind,
+} from "./scan-feedback";
 import {
   listEventos,
   getInscricaoDetalhe,
@@ -52,6 +51,7 @@ import { TicketActionCard } from "./ticket-card";
 import { QRCodeSVG } from "qrcode.react";
 import { TermoAceiteSheet } from "@/features/termos/termo-aceite-sheet";
 import { jaAceitouTermo } from "@/db/repos/termos";
+import { cn } from "cn";
 
 const QRGeneratorLazy = dynamic(() => import("./qr-generator").then((m) => m.QRGenerator), {
   loading: () => <div className="animate-pulse h-64 w-full" />,
@@ -66,21 +66,13 @@ const STATUS_LABEL: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
-const STATUS_TONE: Record<string, string> = {
-  inscrito: "border-blue-500/30 text-blue-600 dark:text-blue-400",
-  confirmado: "border-green-500/30 text-green-600 dark:text-green-400",
-  checkin: "border-green-600/30 text-green-700 dark:text-green-500",
-  checkout: "border-muted-foreground/30 text-muted-foreground",
-  cancelado: "border-destructive/30 text-destructive",
+const STATUS_TONE: Record<string, StatusTone> = {
+  inscrito: "info",
+  confirmado: "primary",
+  checkin: "success",
+  checkout: "neutral",
+  cancelado: "danger",
 };
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <Badge variant="outline" className={STATUS_TONE[status] ?? ""}>
-      {STATUS_LABEL[status] ?? status}
-    </Badge>
-  );
-}
 
 function ActionCard({
   det,
@@ -94,9 +86,15 @@ function ActionCard({
   if (!det) return null;
   const { inscricao, pessoa, evento } = det;
   const st = inscricao.status;
+  const tone = STATUS_TONE[st] ?? "neutral";
 
   return (
-    <Card className="relative overflow-hidden border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20">
+    <Card
+      className={cn(
+        "relative gap-2 overflow-hidden border-l-4 p-4",
+        st === "checkin" ? "border-l-warning" : "border-l-success",
+      )}
+    >
       <Button
         variant="ghost"
         size="icon"
@@ -108,7 +106,7 @@ function ActionCard({
       <div className="grid gap-2">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{pessoa?.nome_completo ?? "—"}</h3>
-          <StatusBadge status={st} />
+          <StatusBadge tone={tone}>{STATUS_LABEL[st] ?? st}</StatusBadge>
         </div>
         {pessoa?.cpf && <p className="text-sm text-muted-foreground">CPF: {pessoa.cpf}</p>}
         <p className="text-sm text-muted-foreground">{evento?.nome ?? "Evento não encontrado"}</p>
@@ -138,7 +136,8 @@ function ActionCard({
           </Button>
         ) : st === "checkout" ? (
           <Button
-            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+            className="w-full bg-success text-success-foreground hover:bg-success/90"
             onClick={() =>
               onCheckin(
                 inscricao.id,
@@ -152,7 +151,8 @@ function ActionCard({
           </Button>
         ) : (
           <Button
-            className="w-full bg-green-600 hover:bg-green-700"
+            size="lg"
+            className="w-full bg-success text-success-foreground hover:bg-success/90"
             onClick={() =>
               onCheckin(
                 inscricao.id,
@@ -178,6 +178,7 @@ export function CheckinView() {
   const [ticketSelecionado, setTicketSelecionado] = useState<TicketDetalhe | null>(null);
   const [eventoFiltro, setEventoFiltro] = useState<string | null>(null);
   const [erroScanner, setErroScanner] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<ScanFeedbackData | null>(null);
   const [termoSheet, setTermoSheet] = useState<{
     open: boolean;
     inscricaoId: string;
@@ -194,6 +195,12 @@ export function CheckinView() {
     if (selecionada || ticketSelecionado) setScannerAtivo(false);
   }, [selecionada, ticketSelecionado]);
 
+  function emitir(kind: ScanFeedbackKind, title: string, subtitle?: string) {
+    setFeedback({ kind, title, subtitle });
+    playScanBeep(kind);
+    vibrateScan(kind);
+  }
+
   async function fazerCheckinComTermo(
     inscricaoId: string,
     eventoId: string,
@@ -207,20 +214,19 @@ export function CheckinView() {
       return;
     }
     const r = await fazerCheckin(inscricaoId);
-    if (r) toast.success("Check-in realizado");
-    else toast.error("Falha ao registrar check-in");
+    if (r) emitir("ok", "ENTRADA LIBERADA", pessoaNome || undefined);
+    else emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
   }
 
   async function handleCheckinTicket(ticketId: string) {
     const r = await fazerCheckinTicket(ticketId);
     if (!r) {
-      toast.error("Falha ao registrar o check-in do ingresso");
+      emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
       return;
     }
-    toast.success("Check-in do ingresso realizado", {
-      description: "Registrado neste dispositivo; sincroniza automaticamente com conexão.",
-    });
-    setTicketSelecionado(await getTicketDetalhe(r));
+    const det = await getTicketDetalhe(r);
+    setTicketSelecionado(det);
+    emitir("ok", "ENTRADA LIBERADA", det?.pessoa?.nome_completo ?? undefined);
   }
 
   async function resolverTexto(texto: string) {
@@ -229,26 +235,33 @@ export function CheckinView() {
     if (hash) {
       const ticket = await getTicketByHash(hash);
       if (!ticket) {
-        toast.error("Ingresso não encontrado neste dispositivo (ainda não sincronizado?).");
+        emitir("error", "NÃO ENCONTRADO", "Ingresso ainda não sincronizado neste dispositivo.");
         return;
       }
-      setTicketSelecionado(await getTicketDetalhe(ticket));
+      const det = await getTicketDetalhe(ticket);
+      setTicketSelecionado(det);
       setSelecionada(null);
       setBusca("");
       setResultados([]);
+      if (det.ticket.is_checked_in) {
+        emitir("warn", "JÁ UTILIZADO", det.pessoa?.nome_completo ?? undefined);
+      }
       return;
     }
     const id = parseInscricaoQr(texto);
     if (id) {
       const det = await getInscricaoDetalhe(id);
       if (!det) {
-        toast.error("Inscrição não encontrada neste dispositivo (ainda não sincronizada?).");
+        emitir("error", "NÃO ENCONTRADO", "Inscrição ainda não sincronizada neste dispositivo.");
         return;
       }
       setSelecionada(det);
       setTicketSelecionado(null);
       setBusca("");
       setResultados([]);
+      if (det.inscricao.status === "checkin") {
+        emitir("warn", "JÁ ESTÁ PRESENTE", det.pessoa?.nome_completo ?? undefined);
+      }
       return;
     }
     // busca por nome
@@ -278,18 +291,16 @@ export function CheckinView() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Recepção</h1>
-        {checkinsPendentes && checkinsPendentes > 0 ? (
-          <Badge
-            variant="outline"
-            className="border-amber-500/40 text-amber-600 dark:text-amber-500"
-          >
-            {checkinsPendentes} check-in(s) aguardando sincronização
-          </Badge>
-        ) : null}
-      </div>
+    <PageContainer width="content">
+      <PageHeader
+        title="Recepção"
+        description="Check-in de inscrições e ingressos — registra no dispositivo e sincroniza depois."
+        actions={
+          checkinsPendentes && checkinsPendentes > 0 ? (
+            <StatusBadge tone="warning">{checkinsPendentes} aguardando sincronização</StatusBadge>
+          ) : null
+        }
+      />
 
       <Card className="mb-4">
         <CardContent className="pt-6 grid gap-3">
@@ -322,6 +333,7 @@ export function CheckinView() {
           ) : (
             <Button
               variant="outline"
+              size="lg"
               className="w-full"
               onClick={() => setScannerAtivo(!scannerAtivo)}
             >
@@ -392,7 +404,9 @@ export function CheckinView() {
                         {evento?.nome ?? "—"}
                       </p>
                     </div>
-                    <StatusBadge status={inscricao.status} />
+                    <StatusBadge tone={STATUS_TONE[inscricao.status] ?? "neutral"}>
+                      {STATUS_LABEL[inscricao.status] ?? inscricao.status}
+                    </StatusBadge>
                   </Button>
                 </li>
               ))}
@@ -421,14 +435,16 @@ export function CheckinView() {
           }}
           onSuccess={() => {
             fazerCheckin(termoSheet.inscricaoId).then((r) => {
-              if (r) toast.success("Check-in realizado");
-              else toast.error("Falha ao registrar check-in");
+              if (r) emitir("ok", "ENTRADA LIBERADA", termoSheet.pessoaNome || undefined);
+              else emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
             });
             setTermoSheet(null);
           }}
         />
       )}
-    </div>
+
+      <ScanFeedback feedback={feedback} onDone={() => setFeedback(null)} />
+    </PageContainer>
   );
 }
 

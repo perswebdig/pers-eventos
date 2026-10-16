@@ -69,10 +69,7 @@ export function PortalTermos() {
                 <p className="line-clamp-2 text-xs text-muted-foreground">{termoTexto[tipo]}</p>
               </div>
               {aceito ? (
-                <Badge
-                  variant="outline"
-                  className="shrink-0 border-green-600/30 text-green-700 dark:text-green-500"
-                >
+                <Badge variant="outline" className="shrink-0 border-success/30 text-success">
                   <ShieldCheck className="mr-1 size-3.5" /> Aceito
                 </Badge>
               ) : (

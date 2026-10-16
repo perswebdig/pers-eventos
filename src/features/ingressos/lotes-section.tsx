@@ -208,7 +208,7 @@ export function LotesSection({ eventoId }: { eventoId: string }) {
                   {lote.is_active ? (
                     <Pause className="size-4" />
                   ) : (
-                    <Play className="size-4 text-green-600" />
+                    <Play className="size-4 text-success" />
                   )}
                 </Button>
                 <Button

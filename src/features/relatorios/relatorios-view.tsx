@@ -65,7 +65,7 @@ function SummaryCard({
         <div className="text-2xl font-bold">{value}</div>
         <p className="text-xs text-muted-foreground">
           {subtitle}
-          {trend && <span className="ml-2 text-green-600">{trend}</span>}
+          {trend && <span className="ml-2 text-success">{trend}</span>}
         </p>
       </CardContent>
     </Card>
@@ -84,7 +84,7 @@ function StatusBadge({
   const tones: Record<string, string> = {
     secondary: "bg-secondary text-secondary-foreground",
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-    green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    green: "bg-success/15 text-success",
     amber: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
     purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
     red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
@@ -596,7 +596,7 @@ function CheckinsChart() {
               <div className="flex-1 h-6 bg-muted rounded relative overflow-hidden">
                 {d.checkins > 0 && (
                   <div
-                    className="absolute inset-y-0 left-0 bg-green-500 rounded-l"
+                    className="absolute inset-y-0 left-0 bg-success rounded-l"
                     style={{ width: `${(d.checkins / maxTotal) * 100}%` }}
                     title={`Check-ins: ${d.checkins}`}
                   />
@@ -613,7 +613,7 @@ function CheckinsChart() {
                 )}
               </div>
               <span className="w-20 text-xs text-right font-mono">
-                {d.checkins ? <span className="text-green-600">↑{d.checkins}</span> : "—"}
+                {d.checkins ? <span className="text-success">↑{d.checkins}</span> : "—"}
                 {d.checkouts ? <span className="text-blue-600 ml-1">↓{d.checkouts}</span> : "—"}
               </span>
             </div>
@@ -621,7 +621,7 @@ function CheckinsChart() {
         </div>
         <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <span className="w-3 h-3 bg-green-500 rounded" /> Check-ins
+            <span className="w-3 h-3 bg-success rounded" /> Check-ins
           </span>
           <span className="flex items-center gap-1">
             <span className="w-3 h-3 bg-blue-500 rounded" /> Check-outs

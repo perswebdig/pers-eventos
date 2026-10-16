@@ -7,7 +7,7 @@ const MAP: Record<SyncStatus, { label: string; icon: typeof CloudCheck; classNam
   synced: {
     label: "Sincronizado",
     icon: CloudCheck,
-    className: "border-green-600/30 text-green-700 dark:text-green-500",
+    className: "border-success/30 text-success",
   },
   pending: {
     label: "Pendente",
