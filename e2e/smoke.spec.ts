@@ -23,6 +23,30 @@ test("rota protegida redireciona para o login", async ({ page }) => {
   expect(new URL(page.url()).pathname).toBe("/login");
 });
 
+test("portal do cliente é protegido (Meus Ingressos)", async ({ page }) => {
+  await page.goto("/portal/ingressos");
+  await page.waitForURL(/\/login/);
+  expect(new URL(page.url()).pathname).toBe("/login");
+});
+
+test("webhook de pagamento exige o segredo", async ({ request }) => {
+  const res = await request.post("/api/webhooks/payment", {
+    data: { order_id: "00000000-0000-0000-0000-000000000000", event: "payment_succeeded" },
+  });
+  expect(res.status()).toBe(401);
+});
+
+test("checkout exige autenticação", async ({ request }) => {
+  const res = await request.post("/api/checkout", {
+    data: {
+      ticket_type_id: "00000000-0000-0000-0000-000000000000",
+      quantity: 1,
+      payment_method: "pix",
+    },
+  });
+  expect(res.status()).toBe(401);
+});
+
 test("offline fallback responde", async ({ page }) => {
   const res = await page.goto("/offline");
   expect(res?.ok()).toBeTruthy();

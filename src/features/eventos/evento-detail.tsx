@@ -172,7 +172,8 @@ export function EventoDetailSheet({
                     {vendas.ingressosVendidos} ingresso(s) vendido(s)
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Receita: {formatCurrency(vendas.receita)} · {vendas.pedidosPagos} pedido(s) pago(s)
+                    Receita: {formatCurrency(vendas.receita)} · {vendas.pedidosPagos} pedido(s)
+                    pago(s)
                   </p>
                 </div>
               ) : null}

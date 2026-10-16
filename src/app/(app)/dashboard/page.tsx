@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  Users,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
-  TrendingUp,
-  Ticket,
-} from "lucide-react";
+import { Users, CalendarDays, CheckCircle2, ClipboardList, TrendingUp, Ticket } from "lucide-react";
 import { requireTenant } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -48,10 +41,7 @@ async function resumoIngressos(tenantId: string) {
   if (!isSupabaseConfigured) return { vendidos: 0, receita: 0 };
   const supabase = await createClient();
   const [{ count }, { data }] = await Promise.all([
-    supabase
-      .from("tickets")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", tenantId),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId),
     supabase.from("orders").select("total_amount").eq("tenant_id", tenantId).eq("status", "paid"),
   ]);
   const receita = (data ?? []).reduce((acc, o) => acc + Number(o.total_amount ?? 0), 0);

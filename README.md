@@ -29,6 +29,7 @@ sítios, fazendas, centros de terapia).
 | 9     | Polimento UX                     | ✅ concluído |
 | 10    | Multitenant + 3 níveis de acesso | ✅ concluído |
 | 11    | Deploy PM2/Docker (background)   | ✅ concluído |
+| 12    | Financeiro + Ingressos           | ✅ concluído |
 
 > **Auth + perfis**: login por e-mail/senha. O **primeiro usuário** vira
 > `super_admin` (trigger `handle_new_user`); os demais entram como `cliente`.
@@ -441,25 +442,51 @@ domínio (pessoas, eventos, inscrições, documentos, termos, logs) carregam
   tenant ativo é gravado por `setActiveTenantId` (`src/db/tenant.ts`) para evitar
   vazamento de dados entre contas no mesmo dispositivo.
 - APIs: `/api/me`, `/api/health`, `/api/admin/estabelecimentos[/:id]`,
-  `/api/eventos[/:id]`, `/api/usuarios[/:id]`, `/api/portal/{perfil,eventos,inscricoes,termos}`.
+  `/api/eventos[/:id]`, `/api/usuarios[/:id]`, `/api/portal/{perfil,eventos,inscricoes,termos}`,
+  `/api/checkout`, `/api/webhooks/payment`, `/api/tenant/ticket-types[/:id]`,
+  `/api/tenant/check-in/sync`, `/api/portal/{pedidos,eventos/:id}`.
 
 ### Aplicar as migrations
 
-As migrations multitenant estão em `supabase/migrations/`
-(`20260101000300`…`20260101000600`). Aplique com a Supabase CLI
+As migrations estão em `supabase/migrations/`
+(`20260101000300`…`20260101000800`). Aplique com a Supabase CLI
 (`supabase db push`) ou colando os arquivos, em ordem, no **SQL Editor** do
 painel. Sem elas o app roda apenas offline (Dexie).
+
+## Módulo Financeiro + Ingressos (passo 12)
+
+Venda de ingressos com lotes, checkout do cliente e check-in offline na recepção:
+
+- **Tabelas** (`20260101000700_ticketing_finance.sql`): `ticket_types` (lotes),
+  `orders` (pedidos, `pending` → `paid`/`canceled`/`refunded`) e `tickets`
+  (ingressos individuais com `qr_code_hash` único). RLS por tenant, como o resto.
+- **Admin**: no detalhe do evento há a seção **Lotes de ingressos** (criar,
+  editar, pausar, excluir; bloqueado excluir com vendas). Funciona offline:
+  grava no Dexie e sincroniza (`ticket_types` entra no push+pull).
+- **Cliente**: `/portal/eventos/:id` (checkout — lote, quantidade, Pix/cartão) e
+  `/portal/ingressos` (carteira com QR Code `PERS2:<hash>` por ingresso).
+- **Pagamento**: `POST /api/webhooks/payment` (header `x-webhook-secret` com
+  `PAYMENT_WEBHOOK_SECRET`) confirma o pedido de forma atômica e idempotente via
+  RPC `confirm_order_payment`, gerando um ingresso por unidade comprada.
+  `payment_failed` cancela o pedido.
+- **Recepção**: o leitor aceita inscrições (`PERS1:<uuid>`) e ingressos
+  (`PERS2:<hash>`). O check-in do ingresso é validado no Dexie (offline) e a
+  fila `checkin_queue` é enviada a `POST /api/tenant/check-in/sync` quando há
+  conexão (idempotente; o pull nunca sobrescreve ingresso com check-in pendente).
+- `orders`/`tickets` são somente-leitura no dispositivo (chegam pelo pull); o
+  servidor é a fonte da verdade da venda.
 
 ## Variáveis de ambiente
 
 Copie `.env.example` para `.env.local` (dev) ou `.env` (produção):
 
-| Variável                                                                 | Uso                                                   |
-| ------------------------------------------------------------------------ | ----------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`                                               | URL do projeto (público)                              |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (aceita ambas)                          |
-| `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`                      | Chave secreta server-side (Admin API: criar usuários) |
-| `PORT`                                                                   | Porta do app (padrão `3010`)                          |
+| Variável                                                                 | Uso                                                         |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                                               | URL do projeto (público)                                    |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (aceita ambas)                                |
+| `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`                      | Chave secreta server-side (Admin API: criar usuários)       |
+| `PAYMENT_WEBHOOK_SECRET`                                                 | Segredo do webhook de pagamento (header `x-webhook-secret`) |
+| `PORT`                                                                   | Porta do app (padrão `3010`)                                |
 
 ## Deploy na Vercel (recomendado)
 
