@@ -29,5 +29,52 @@ export async function GET(_request: Request, { params }: Params) {
 
   if (lotesError) return jsonError(lotesError.message, 500);
 
-  return NextResponse.json({ data: { evento, lotes: lotes ?? [] } });
+  // Setores com lugar marcado (opcional) com contagem de lugares livres.
+  // Estruturas ainda indisponíveis (migração não aplicada) não podem derrubar
+  // a venda por lote: em caso de erro, seguimos apenas com lotes.
+  await supabase.rpc("liberar_reservas_expiradas");
+
+  let espacos: {
+    id: string;
+    nome: string;
+    price: number;
+    fileiras: number;
+    cadeiras_por_fileira: number;
+    is_active: boolean;
+  }[] = [];
+  const livres: Record<string, number> = {};
+
+  const { data: espacosData, error: espacosError } = await supabase
+    .from("espacos")
+    .select("id, nome, price, fileiras, cadeiras_por_fileira, is_active")
+    .eq("event_id", id)
+    .eq("is_active", true)
+    .order("price", { ascending: true });
+
+  if (!espacosError && espacosData) {
+    espacos = espacosData;
+
+    const espacoIds = espacos.map((e) => e.id);
+    if (espacoIds.length > 0) {
+      const { data: assentos } = await supabase
+        .from("assentos")
+        .select("espaco_id")
+        .in("espaco_id", espacoIds)
+        .eq("status", "livre");
+      for (const assento of assentos ?? []) {
+        livres[assento.espaco_id] = (livres[assento.espaco_id] ?? 0) + 1;
+      }
+    }
+  }
+
+  return NextResponse.json({
+    data: {
+      evento,
+      lotes: lotes ?? [],
+      espacos: espacos.map((espaco) => ({
+        ...espaco,
+        livres: livres[espaco.id] ?? 0,
+      })),
+    },
+  });
 }

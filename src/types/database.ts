@@ -62,6 +62,14 @@ export type Pessoa = {
   updated_at: string;
 };
 
+export type PessoaEstabelecimento = {
+  id: string;
+  pessoa_id: string;
+  tenant_id: string;
+  origem: "cadastro" | "compra" | "inscricao" | "cliente" | "estabelecimento";
+  created_at: string;
+};
+
 export type Menor = {
   id: string;
   tenant_id?: string | null;
@@ -116,12 +124,42 @@ export type TicketType = {
   updated_at: string;
 };
 
+export type Espaco = {
+  id: string;
+  tenant_id?: string | null;
+  event_id: string;
+  nome: string;
+  price: number;
+  fileiras: number;
+  cadeiras_por_fileira: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssentoStatus = "livre" | "reservado" | "vendido";
+
+export type Assento = {
+  id: string;
+  tenant_id?: string | null;
+  espaco_id: string;
+  fileira: string;
+  numero: number;
+  status: AssentoStatus;
+  order_id: string | null;
+  reservado_ate: string | null;
+  ticket_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Order = {
   id: string;
   tenant_id?: string | null;
   customer_id: string;
   event_id: string;
-  ticket_type_id: string;
+  ticket_type_id: string | null;
+  espaco_id?: string | null;
   quantity: number;
   total_amount: number;
   status: OrderStatus;
@@ -134,9 +172,12 @@ export type Ticket = {
   id: string;
   tenant_id?: string | null;
   order_id: string;
-  ticket_type_id: string;
+  ticket_type_id: string | null;
   customer_id: string;
   qr_code_hash: string;
+  espaco_id?: string | null;
+  assento_fileira?: string | null;
+  assento_numero?: number | null;
   is_checked_in: boolean;
   checked_in_at: string | null;
   created_at: string;
@@ -222,6 +263,12 @@ export interface Database {
         Partial<Pessoa>,
         [Rel<"tenant_id", "estabelecimentos">]
       >;
+      pessoa_estabelecimentos: Table<
+        PessoaEstabelecimento,
+        Partial<PessoaEstabelecimento>,
+        Partial<PessoaEstabelecimento>,
+        [Rel<"pessoa_id", "pessoas">, Rel<"tenant_id", "estabelecimentos">]
+      >;
       menores: Table<
         Menor,
         Partial<Menor>,
@@ -240,6 +287,23 @@ export interface Database {
         Partial<TicketType>,
         [Rel<"event_id", "eventos">, Rel<"tenant_id", "estabelecimentos">]
       >;
+      espacos: Table<
+        Espaco,
+        Partial<Espaco>,
+        Partial<Espaco>,
+        [Rel<"event_id", "eventos">, Rel<"tenant_id", "estabelecimentos">]
+      >;
+      assentos: Table<
+        Assento,
+        Partial<Assento>,
+        Partial<Assento>,
+        [
+          Rel<"espaco_id", "espacos">,
+          Rel<"order_id", "orders">,
+          Rel<"ticket_id", "tickets">,
+          Rel<"tenant_id", "estabelecimentos">,
+        ]
+      >;
       orders: Table<
         Order,
         Partial<Order>,
@@ -248,6 +312,7 @@ export interface Database {
           Rel<"customer_id", "pessoas">,
           Rel<"event_id", "eventos">,
           Rel<"ticket_type_id", "ticket_types">,
+          Rel<"espaco_id", "espacos">,
           Rel<"tenant_id", "estabelecimentos">,
         ]
       >;
@@ -258,6 +323,7 @@ export interface Database {
         [
           Rel<"order_id", "orders">,
           Rel<"ticket_type_id", "ticket_types">,
+          Rel<"espaco_id", "espacos">,
           Rel<"customer_id", "pessoas">,
           Rel<"tenant_id", "estabelecimentos">,
         ]
@@ -306,6 +372,36 @@ export interface Database {
       confirm_order_payment: {
         Args: { p_order_id: string; p_hashes: string[] };
         Returns: Order;
+      };
+      criar_espaco: {
+        Args: {
+          p_event_id: string;
+          p_nome: string;
+          p_price: number;
+          p_fileiras: number;
+          p_cadeiras_por_fileira: number;
+        };
+        Returns: Espaco;
+      };
+      liberar_reservas_expiradas: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      reservar_assentos: {
+        Args: {
+          p_espaco_id: string;
+          p_assento_ids: string[];
+          p_payment_method: PaymentMethod;
+        };
+        Returns: Order;
+      };
+      selecionar_estabelecimento: {
+        Args: { p_tenant_id: string };
+        Returns: Estabelecimento;
+      };
+      vincular_pessoa: {
+        Args: { p_cpf: string | null; p_email: string | null };
+        Returns: Pessoa;
       };
     };
     Enums: {

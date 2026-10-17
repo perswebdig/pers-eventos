@@ -37,6 +37,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { encodeInscricaoQr } from "@/features/checkin/qr";
 import { LotesSection } from "@/features/ingressos/lotes-section";
+import { EspacosSection } from "./espacos-section";
 import {
   addInscricao,
   getEventoDetalhe,
@@ -209,6 +210,9 @@ export function EventoDetailSheet({
                   <TabsTrigger value="ingressos" className="flex-1">
                     Ingressos
                   </TabsTrigger>
+                  <TabsTrigger value="espacos" className="flex-1">
+                    Espaços
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="inscritos" className="space-y-3">
@@ -373,6 +377,10 @@ export function EventoDetailSheet({
 
                 <TabsContent value="ingressos" className="space-y-3">
                   <LotesSection eventoId={detalhe.evento.id} />
+                </TabsContent>
+
+                <TabsContent value="espacos" className="space-y-3">
+                  <EspacosSection eventoId={detalhe.evento.id} />
                 </TabsContent>
               </Tabs>
             </div>

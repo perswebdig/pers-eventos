@@ -13,11 +13,18 @@ import { EmptyState } from "@/components/empty-state";
 import { encodeIngressoQr } from "@/features/checkin/qr";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn } from "cn";
-import type { Evento, Order, Ticket as TicketRow, TicketType } from "@/types/database";
+import type {
+  Espaco,
+  Evento,
+  Order,
+  Ticket as TicketRow,
+  TicketType,
+} from "@/types/database";
 
 type PedidoCompleto = Order & {
   evento: Evento | null;
   ticket_type: TicketType | null;
+  espaco: Espaco | null;
   tickets: TicketRow[];
 };
 
@@ -93,8 +100,8 @@ export function PortalIngressos() {
                 </StatusBadge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {pedido.ticket_type?.name ?? "Lote"} · {pedido.quantity} ingresso(s) ·{" "}
-                {formatCurrency(Number(pedido.total_amount))}
+                {pedido.espaco?.nome ?? pedido.ticket_type?.name ?? "Lote"} · {pedido.quantity}{" "}
+                ingresso(s) · {formatCurrency(Number(pedido.total_amount))}
                 {pedido.evento?.data_inicio
                   ? ` · ${new Date(pedido.evento.data_inicio).toLocaleDateString("pt-BR")}`
                   : ""}
@@ -120,6 +127,12 @@ export function PortalIngressos() {
                       )}
                     >
                       <div className="flex flex-col items-center gap-3">
+                        {ticket.assento_fileira ? (
+                          <StatusBadge tone="primary">
+                            {pedido.espaco?.nome ?? "Assento"} · Fileira {ticket.assento_fileira} ·
+                            Nº {ticket.assento_numero}
+                          </StatusBadge>
+                        ) : null}
                         <div className="rounded-lg bg-white p-3 shadow-sm">
                           <QRCodeSVG value={encodeIngressoQr(ticket.qr_code_hash)} size={156} />
                         </div>

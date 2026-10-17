@@ -44,6 +44,14 @@ export async function POST(request: Request) {
   if (data!.event === "payment_failed") {
     if (order.status === "pending") {
       await admin.from("orders").update({ status: "canceled" }).eq("id", order.id);
+      // Pedidos de lugar marcado devolvem as cadeiras à venda imediatamente.
+      if (order.espaco_id) {
+        await admin
+          .from("assentos")
+          .update({ status: "livre", order_id: null, reservado_ate: null })
+          .eq("order_id", order.id)
+          .eq("status", "reservado");
+      }
     }
     return NextResponse.json({ data: { order_id: order.id, status: "canceled" } });
   }

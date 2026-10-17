@@ -11,12 +11,22 @@ export async function GET() {
   if (!ctx.pessoaId) return NextResponse.json({ data: [] });
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const comEspaco = await supabase
     .from("orders")
-    .select("*, evento:eventos(*), ticket_type:ticket_types(*), tickets(*)")
+    .select("*, evento:eventos(*), ticket_type:ticket_types(*), espaco:espacos(*), tickets(*)")
     .eq("customer_id", ctx.pessoaId)
     .order("created_at", { ascending: false });
 
-  if (error) return jsonError(error.message, 500);
-  return NextResponse.json({ data: data ?? [] });
+  // Estrutura de espaços ainda indisponível (migração não aplicada): a
+  // carteira de ingressos continua funcionando sem o embed do setor.
+  const resultado = comEspaco.error
+    ? await supabase
+        .from("orders")
+        .select("*, evento:eventos(*), ticket_type:ticket_types(*), tickets(*)")
+        .eq("customer_id", ctx.pessoaId)
+        .order("created_at", { ascending: false })
+    : comEspaco;
+
+  if (resultado.error) return jsonError(resultado.error.message, 500);
+  return NextResponse.json({ data: resultado.data ?? [] });
 }

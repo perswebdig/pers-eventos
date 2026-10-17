@@ -19,7 +19,7 @@ export async function getTicketByHash(hash: string): Promise<TicketLocal | undef
 export async function getTicketDetalhe(ticket: TicketLocal): Promise<TicketDetalhe> {
   const [pessoa, lote] = await Promise.all([
     db.pessoas.get(ticket.customer_id),
-    db.ticket_types.get(ticket.ticket_type_id),
+    ticket.ticket_type_id ? db.ticket_types.get(ticket.ticket_type_id) : Promise.resolve(undefined),
   ]);
   const evento = lote ? await db.eventos.get(lote.event_id) : undefined;
   return {
@@ -36,7 +36,7 @@ export async function listTicketsByEvento(eventoId: string): Promise<TicketLocal
   const lotes = await db.ticket_types.where("event_id").equals(eventoId).toArray();
   const loteIds = new Set(lotes.map((l) => l.id));
   const todos = await db.tickets.toArray();
-  return todos.filter((t) => loteIds.has(t.ticket_type_id));
+  return todos.filter((t) => t.ticket_type_id && loteIds.has(t.ticket_type_id));
 }
 
 // Registra o check-in localmente e adiciona o hash à fila de sincronização.
