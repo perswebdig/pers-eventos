@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { APP_NAME, navItemsForRole } from "@/lib/constants";
 import type { AppRole } from "@/lib/auth/roles";
 import { BottomNav } from "@/components/bottom-nav";
+import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SyncStatusChip } from "@/components/sync-status-chip";
 import { UserMenu } from "@/components/user-menu";
@@ -76,6 +77,7 @@ export function AppHeader({
             <SyncStatusChip />
             <ThemeToggle />
             <UserMenu email={email ?? null} role={role} />
+            <SignOutButton />
           </div>
         </div>
       </header>
