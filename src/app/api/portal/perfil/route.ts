@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { apiSession, jsonError, parseBody } from "@/lib/auth/api";
 import { createClient } from "@/lib/supabase/server";
@@ -56,15 +57,24 @@ export async function PUT(request: Request) {
 
   if (pessoaId) {
     const { error } = await supabase.from("pessoas").update(row).eq("id", pessoaId);
-    if (error) return jsonError(error.message, 400);
+    if (error) {
+      if (error.code === "23505") {
+        return jsonError("Já existe um cadastro com este CPF. Procure a recepção.", 409);
+      }
+      return jsonError(error.message, 400);
+    }
   } else {
-    const { data: created, error } = await supabase
-      .from("pessoas")
-      .insert(row)
-      .select("id")
-      .single();
-    if (error) return jsonError(error.message, 400);
-    pessoaId = created.id;
+    // O id é gerado aqui e o INSERT não usa RETURNING: a pessoa recém-criada
+    // ainda não é visível ao próprio cliente (RLS de pessoas) até o perfil ser
+    // vinculado abaixo — e o PostgREST valida o SELECT ao devolver a linha.
+    pessoaId = randomUUID();
+    const { error } = await supabase.from("pessoas").insert({ id: pessoaId, ...row });
+    if (error) {
+      if (error.code === "23505") {
+        return jsonError("Já existe um cadastro com este CPF. Procure a recepção.", 409);
+      }
+      return jsonError(error.message, 400);
+    }
 
     // Vincula a pessoa ao perfil do usuário (auto-relacionamento do cliente).
     const { error: linkError } = await supabase
