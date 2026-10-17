@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth/session";
+import { requireEstabelecimento } from "@/lib/auth/session";
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
 import { PortalEventos } from "@/features/portal/portal-eventos";
@@ -6,7 +6,7 @@ import { PortalEventos } from "@/features/portal/portal-eventos";
 export const metadata = { title: "Eventos" };
 
 export default async function PortalEventosPage() {
-  await requireRole(["cliente"]);
+  await requireEstabelecimento();
   return (
     <PageContainer width="content">
       <PageHeader

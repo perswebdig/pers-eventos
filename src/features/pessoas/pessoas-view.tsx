@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import dynamic from "next/dynamic";
-import { Database, Plus, RefreshCw, UserPlus } from "lucide-react";
+import { Database, Link2, Loader2, Plus, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -24,6 +26,7 @@ import { SyncStatusBadge } from "@/components/sync-status-badge";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
 import { PessoaForm } from "./pessoa-form";
 import { toPessoaFormValues, type PessoaFormValues } from "./pessoa-schema";
+import { interpretarBusca } from "./vincular-schema";
 import type { Pessoa } from "@/types/database";
 import { LocalSyncFields } from "@/db/types";
 import {
@@ -78,6 +81,9 @@ export function PessoasView() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [usarLocal, setUsarLocal] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
+  const [vincularOpen, setVincularOpen] = useState(false);
+  const [buscaVinculo, setBuscaVinculo] = useState("");
+  const [vinculando, setVinculando] = useState(false);
 
   const pessoasLocal = useLiveQuery(() => listPessoas(), []);
 
@@ -198,6 +204,39 @@ export function PessoasView() {
     toast.success(n ? `${n} pessoas de exemplo adicionadas` : "Já existem dados de exemplo");
   }
 
+  async function handleVincular() {
+    const alvo = interpretarBusca(buscaVinculo);
+    if (!alvo) {
+      toast.error("Busca inválida", {
+        description: "Informe um CPF (11 dígitos) ou um e-mail válido.",
+      });
+      return;
+    }
+
+    setVinculando(true);
+    try {
+      const res = await fetch("/api/tenant/pessoas/vincular", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(alvo),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao vincular");
+
+      const pessoa = (body as { data?: { nome_completo?: string } }).data;
+      toast.success(`Pessoa vinculada: ${pessoa?.nome_completo ?? "ok"}`, {
+        description: "Ela já aparece na sua base de pessoas.",
+      });
+      setVincularOpen(false);
+      setBuscaVinculo("");
+      await recarregar();
+    } catch (err) {
+      toast.error("Não foi possível vincular", { description: (err as Error).message });
+    } finally {
+      setVinculando(false);
+    }
+  }
+
   const carregando = pessoasCombinadas === null && !usarLocal;
   const carregandoLocal = pessoasLocal === undefined;
   const lista = filtradas ?? [];
@@ -259,6 +298,9 @@ export function PessoasView() {
               aria-label="Recarregar do servidor"
             >
               <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
+            </Button>
+            <Button variant="outline" onClick={() => setVincularOpen(true)}>
+              <Link2 className="size-4" /> Vincular
             </Button>
             <Button onClick={abrirCriacao}>
               <Plus className="size-4" /> Nova
@@ -359,6 +401,51 @@ export function PessoasView() {
         onEdit={abrirEdicao}
         onDelete={(id) => setDeleteId(id)}
       />
+
+      <Dialog
+        open={vincularOpen}
+        onOpenChange={(open) => {
+          setVincularOpen(open);
+          if (!open) setBuscaVinculo("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular pessoa existente</DialogTitle>
+            <DialogDescription>
+              Adicione à sua base alguém que já usa a plataforma. Busque pelo CPF ou e-mail
+              cadastrado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="vincular_busca">CPF ou e-mail</Label>
+              <Input
+                id="vincular_busca"
+                placeholder="000.000.000-00 ou pessoa@exemplo.com"
+                value={buscaVinculo}
+                onChange={(e) => setBuscaVinculo(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleVincular();
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setVincularOpen(false)} disabled={vinculando}>
+                Cancelar
+              </Button>
+              <Button onClick={handleVincular} disabled={vinculando || !buscaVinculo.trim()}>
+                {vinculando ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Link2 className="size-4" />
+                )}
+                Vincular
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteId}

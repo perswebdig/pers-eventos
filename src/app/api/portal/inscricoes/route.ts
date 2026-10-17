@@ -33,6 +33,9 @@ export async function POST(request: Request) {
   if (!ctx.pessoaId) {
     return jsonError("Complete seu cadastro antes de se inscrever.", 409);
   }
+  if (!ctx.tenantId) {
+    return jsonError("Escolha um estabelecimento antes de se inscrever.", 409);
+  }
 
   const { data, response } = await parseBody(request, inscricaoSchema);
   if (response) return response;

@@ -8,15 +8,15 @@ Plataforma SaaS multi-tenant para gestão de eventos: cadastro de pessoas, event
 
 ## 2. Arquitetura técnica
 
-| Camada | Tecnologia |
-|---|---|
-| Front-end | Next.js (App Router), React 19, Tailwind CSS v4, shadcn/base-ui, next-themes |
-| Back-end | Rotas de API Next.js + Supabase (Postgres, Auth, Storage, RLS multi-tenant) |
-| Offline | Dexie/IndexedDB no cliente + fila de sync + service worker (Workbox) |
-| Dados locais | Repositórios em `src/db/repos/*` espelhando tabelas para leitura offline |
-| Sync | `src/sync/engine.ts` (push/pull com retry e conflito), `worker.ts`, fila de check-ins |
-| Pagamentos | Checkout cria `orders`; confirmação via webhook genérico (`x-webhook-secret`) + RPC `confirm_order_payment` |
-| Deploy | PM2 single-instance (porta 3010), `scripts/deploy.sh` (build + restart + health check) |
+| Camada       | Tecnologia                                                                                                  |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| Front-end    | Next.js (App Router), React 19, Tailwind CSS v4, shadcn/base-ui, next-themes                                |
+| Back-end     | Rotas de API Next.js + Supabase (Postgres, Auth, Storage, RLS multi-tenant)                                 |
+| Offline      | Dexie/IndexedDB no cliente + fila de sync + service worker (Workbox)                                        |
+| Dados locais | Repositórios em `src/db/repos/*` espelhando tabelas para leitura offline                                    |
+| Sync         | `src/sync/engine.ts` (push/pull com retry e conflito), `worker.ts`, fila de check-ins                       |
+| Pagamentos   | Checkout cria `orders`; confirmação via webhook genérico (`x-webhook-secret`) + RPC `confirm_order_payment` |
+| Deploy       | PM2 single-instance (porta 3010), `scripts/deploy.sh` (build + restart + health check)                      |
 
 ## 3. Papéis e acessos
 
@@ -24,39 +24,56 @@ Plataforma SaaS multi-tenant para gestão de eventos: cadastro de pessoas, event
 - **tenant_admin** — dono do estabelecimento: tudo do tenant, usuários e relatórios.
 - **staff** — operação: pessoas, eventos, recepção, termos, relatórios de operação.
 - **recepcao** — papel legado de portaria (check-in).
-- **cliente** — portal do cliente: eventos, inscrições, compra, ingressos, QR, termos.
+- **cliente** — portal do cliente: escolhe o estabelecimento ativo, eventos, inscrições, compra, ingressos, QR, termos.
 
-RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vira `super_admin` automaticamente (trigger `handle_new_user`).
+RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vira `super_admin` automaticamente (trigger `handle_new_user`). Clientes podem pertencer a vários estabelecimentos (`pessoa_estabelecimentos`), mas navegam em um por vez (estabelecimento ativo no perfil) e mantêm todos os ingressos visíveis na carteira.
 
 ## 4. Funcionalidades por módulo
 
 ### 4.1 Autenticação e cadastro
+
 - Login e cadastro por e-mail/senha (Supabase Auth), página `/login` com tema azul/prata.
 - Onboarding self-service (`/onboarding`): cria estabelecimento + usuário administrador (slug automático).
 - Sessão server-side com guards por papel (`requireRole`/`apiSession`).
 
 ### 4.2 Administração da plataforma (super admin)
+
 - CRUD de estabelecimentos (nome, slug, endereço, ativo) em `/admin/estabelecimentos`.
 - Gestão de usuários e papéis por estabelecimento (`/admin/usuarios`, `/api/usuarios`).
 
 ### 4.3 Pessoas
+
 - Cadastro completo com CPF validado, nascimento, contato, endereço, observações.
 - Detecção de menor de idade e vínculo de responsável.
 - Documentos anexados (Storage, bucket `documentos`).
 - Busca, paginação e ficha da pessoa com histórico.
+- **Vincular pessoa existente** por CPF ou e-mail: adiciona à base do estabelecimento alguém que já usa a plataforma (RPC `vincular_pessoa`), sem duplicar cadastro.
+- Base de clientes por estabelecimento (`pessoa_estabelecimentos`): pessoas criadas, vinculadas, inscritas ou que compraram entram automaticamente na base; a equipe enxerga e edita essas pessoas mesmo que elas naveguem em outro estabelecimento.
 
 ### 4.4 Eventos e lotes
+
 - CRUD de eventos (nome, descrição, local, datas, capacidade, status: rascunho/planejado/lotado/realizado/cancelado).
 - Lotes de ingressos (`ticket_types`) com preço, quantidade total/vendida e janela de vendas.
-- Página de detalhe com abas **Inscritos** e **Ingressos**, resumo de ocupação e confirmações de ação.
+- Página de detalhe com abas **Inscritos**, **Ingressos** e **Espaços**, resumo de ocupação e confirmações de ação.
+
+### 4.4.1 Espaços com lugar marcado
+
+- Espaços (`espacos`) = setores do evento com preço único e cadeiras numeradas geradas em grade (fileiras A–Z × cadeiras por fileira, máx. 26 × 200).
+- Aba **Espaços** no detalhe do evento: criação com preview da grade, pausar/reativar, excluir (bloqueado se houver lugares reservados/vendidos) e mapa de ocupação ao vivo (livre/reservado/vendido).
+- Portal: escolha obrigatória de cadeira no mapa, de 1 a 10 lugares, com legenda de status.
+- Reserva de **30 minutos** (`reservar_assentos`): cadeiras ficam em `reservado` até a confirmação; reservas vencidas voltam a ficar livres automaticamente (`liberar_reservas_expiradas`, chamada nas leituras).
+- Confirmação de pagamento vincula cada ingresso à sua cadeira (fileira/número) e marca como vendido (`confirm_order_payment`); falha de pagamento libera as cadeiras na hora.
+- Espaços/assentos funcionam **online** (inventário controlado pelo servidor); lotes continuam offline-first via Dexie.
 
 ### 4.5 Ingressos e vendas
+
 - Inscrições em eventos (portal) com status: inscrito, confirmado, check-in, check-out, cancelado.
-- Checkout com escolha de lote, quantidade e forma de pagamento (Pix/cartão como intenção).
+- Checkout com escolha de lote, quantidade e forma de pagamento (Pix/cartão como intenção) — ou setor com lugar marcado (mapa de cadeiras).
 - Pedidos (`orders`): pending/paid/canceled/refunded; confirmação idempotente via webhook que gera os ingressos com `qr_code_hash` único (RPC `confirm_order_payment`).
-- Carteira de ingressos no portal com QR por ingresso e status (válido/utilizado).
+- Carteira de ingressos no portal com QR por ingresso, status (válido/utilizado) e setor/fileira/número quando for lugar marcado.
 
 ### 4.6 Recepção / check-in (offline-first)
+
 - Leitor de QR Code pela câmera + leitura manual do código.
 - Validação local contra a base Dexie — funciona **sem internet**.
 - Fila local de check-ins com sync automático e idempotente (`/api/tenant/check-in/sync`, máx. 500/lote).
@@ -64,13 +81,16 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 - Ticket-card com ações de liberar entrada e feedback de "já utilizado/não encontrado".
 
 ### 4.7 Termos e LGPD
+
 - Termos de responsabilidade e uso de imagem com texto versionado.
 - Aceite no portal e na recepção, com assinatura desenhada em canvas (bucket `assinaturas`).
 - Log de acesso a dados (`log_acesso_dados`) para auditoria LGPD.
 - Exportação de relatórios de termos e logs.
 
 ### 4.8 Portal do cliente
-- `/portal` — visão geral com atalhos e alerta de cadastro incompleto.
+
+- `/portal` — visão geral com atalhos e alerta de cadastro incompleto; sem estabelecimento ativo, mostra o **seletor de estabelecimento** (onboarding).
+- **Seleção/troca de estabelecimento**: cliente escolhe entre os estabelecimentos ativos ao entrar e pode trocar depois no cadastro (RPC `selecionar_estabelecimento`); trocar não perde ingressos — a carteira mostra pedidos de todos os estabelecimentos.
 - Eventos abertos com busca, inscrição em um toque e compra de ingressos.
 - Checkout guiado: seleção de lote em cartões, stepper de quantidade, Pix/cartão, resumo fixo no mobile, tela de sucesso.
 - Meus Ingressos: pedidos com QR Codes em cartões estilo ticket.
@@ -78,17 +98,20 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 - Termos & LGPD: aceite com status, e edição do próprio cadastro.
 
 ### 4.9 Relatórios
+
 - Resumos (IndexedDB local): pessoas, eventos, inscrições, termos e logs de acesso.
 - Gráficos: movimento diário de check-ins/check-outs (30 dias) e donut de inscrições por status.
 - Exportação CSV de todas as bases.
 
 ### 4.10 Offline-first e PWA
+
 - Service worker com cache de assets e página de fallback `/offline`.
 - Indicador de status de conexão/sincronização no header (badge/chip com pendências).
 - Sync em duas vias (push/pull) por entidade com tratamento de conflito e retry.
 - Manifest PWA com ícones gerados; instalável em Android/iOS.
 
 ### 4.11 Interface e design system
+
 - Tema **azul/prata futurista dark-first** (contraste AAA nas cores de texto), sem verde: sucesso = ciano.
 - Componentes próprios: `PageContainer`, `PageHeader`, `SectionCard`, `StatCard`, `StatusBadge`, `DataTable`, `Toolbar`, `ConfirmDialog`, `EmptyState`.
 - Gráficos SVG próprios (`Donut`, `BarList`, `Sparkline`) sem dependência externa.
@@ -98,13 +121,13 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 ## 5. Operação e infraestrutura
 
 - **Deploy**: `npm run deploy` — build de produção, restart PM2 e health check em `/api/health`.
-- **Banco**: 9 migrações versionadas (`supabase/migrations/`) cobrindo schema, RLS, storage, multi-tenant, ticketing/financeiro e confirmação de pagamento.
+- **Banco**: 12 migrações versionadas (`supabase/migrations/`) cobrindo schema, RLS, storage, multi-tenant, ticketing/financeiro, confirmação de pagamento, guarda do trigger de papel (service role), espaços/assentos e vínculo pessoas ⇄ estabelecimentos.
 - **Scripts de verificação**: `verify-dexie`, `verify-sync`, `verify-pessoas`, `verify-eventos`, `verify-checkin`, `verify-ingressos`, `verify-relatorios`, `verify-termos`.
 - **Correção crítica aplicada**: `postcss.config.js` restaurado (`@tailwindcss/postcss`) — o build de produção não processava Tailwind (CSS quebrado mascarado pelo cache do service worker).
 
 ## 6. Qualidade
 
-- 53 testes unitários (vitest) — utils, repositórios Dexie, ingressos.
+- 63 testes unitários (vitest) — utils, repositórios Dexie, ingressos, mapa de assentos e vínculo de pessoas.
 - 10 testes e2e (Playwright) — smoke de rotas públicas/protegidas, health, manifest, service worker e fallback offline.
 - Lint 0 erros, typecheck limpo, Prettier aplicado.
 - Revisão visual via screenshots (landing, login, dashboard, pessoas, eventos, recepção, portal nas versões desktop e mobile).

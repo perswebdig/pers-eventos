@@ -11,17 +11,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, { params }: Params) {
   const guard = await apiSession(["tenant_admin", "staff", "super_admin"]);
   if (guard.response) return guard.response;
-  const ctx = guard.ctx!;
   const { id } = await params;
 
+  // RLS decide o que a equipe enxerga: pessoas do tenant e pessoas vinculadas.
   const supabase = await createClient();
-  let query = supabase.from("pessoas").select("*").eq("id", id);
-
-  if (!ctx.isSuperAdmin && ctx.tenantId) {
-    query = query.eq("tenant_id", ctx.tenantId);
-  }
-
-  const { data, error } = await query.maybeSingle();
+  const { data, error } = await supabase.from("pessoas").select("*").eq("id", id).maybeSingle();
 
   if (error) return jsonError(error.message, 500);
   if (!data) return jsonError("Pessoa não encontrada.", 404);
@@ -32,7 +26,6 @@ export async function GET(_request: Request, { params }: Params) {
 export async function PATCH(request: Request, { params }: Params) {
   const guard = await apiSession(["tenant_admin", "staff", "super_admin"]);
   if (guard.response) return guard.response;
-  const ctx = guard.ctx!;
   const { id } = await params;
 
   const { data, response } = await parseBody(request, pessoaPatchSchema);
@@ -40,17 +33,10 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const supabase = await createClient();
 
-  // Verifica se a pessoa pertence ao tenant
-  if (!ctx.isSuperAdmin && ctx.tenantId) {
-    const { data: existente } = await supabase
-      .from("pessoas")
-      .select("id, tenant_id")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (!existente || existente.tenant_id !== ctx.tenantId) {
-      return jsonError("Pessoa não encontrada neste estabelecimento.", 404);
-    }
+  // RLS limita a visibilidade (tenant ou vínculo); sem acesso, nada é visto.
+  const { data: existente } = await supabase.from("pessoas").select("id").eq("id", id).maybeSingle();
+  if (!existente) {
+    return jsonError("Pessoa não encontrada neste estabelecimento.", 404);
   }
 
   const partial = data!;

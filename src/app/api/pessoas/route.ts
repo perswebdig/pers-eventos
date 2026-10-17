@@ -4,20 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import { pessoaSchema, toPessoaRow, toMenorRow } from "@/features/pessoas/pessoa-schema";
 import { ehMenor } from "@/lib/format";
 
-// GET /api/pessoas — lista pessoas do tenant (Admin do Estabelecimento).
+// GET /api/pessoas — lista pessoas da base do estabelecimento (RLS: pessoas do
+// tenant + pessoas vinculadas a ele por pessoa_estabelecimentos).
 export async function GET() {
   const guard = await apiSession(["tenant_admin", "staff", "super_admin"]);
   if (guard.response) return guard.response;
-  const ctx = guard.ctx!;
 
   const supabase = await createClient();
-  let query = supabase.from("pessoas").select("*").order("nome_completo", { ascending: true });
-
-  if (!ctx.isSuperAdmin && ctx.tenantId) {
-    query = query.eq("tenant_id", ctx.tenantId);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from("pessoas")
+    .select("*")
+    .order("nome_completo", { ascending: true });
 
   if (error) return jsonError(error.message, 500);
   return NextResponse.json({ data: data ?? [] });
@@ -52,7 +49,10 @@ export async function POST(request: Request) {
 
   if (error) {
     if (error.code === "23505") {
-      return jsonError("Já existe uma pessoa com este CPF.", 409);
+      return jsonError(
+        "Já existe uma pessoa com este CPF. Use “Vincular existente” para adicioná-la à sua base.",
+        409,
+      );
     }
     return jsonError(error.message, 400);
   }

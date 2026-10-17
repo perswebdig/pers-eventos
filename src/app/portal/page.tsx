@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
+import { SeletorEstabelecimento } from "@/features/portal/seletor-estabelecimento";
 
 export const metadata = { title: "Meu espaço" };
 
@@ -31,6 +32,18 @@ const ATALHOS = [
 
 export default async function PortalIndexPage() {
   const ctx = await requireRole(["cliente"]);
+
+  if (!ctx.tenantId) {
+    return (
+      <PageContainer width="content">
+        <PageHeader
+          title="Escolha seu estabelecimento"
+          description="Selecione o estabelecimento para ver os eventos e comprar ingressos. Você pode trocar quando quiser."
+        />
+        <SeletorEstabelecimento modo="onboarding" temPessoa={!!ctx.pessoaId} />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer width="content">

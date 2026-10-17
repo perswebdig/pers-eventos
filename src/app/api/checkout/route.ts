@@ -18,6 +18,7 @@ export async function POST(request: Request) {
   const ctx = guard.ctx!;
 
   if (!ctx.pessoaId) return jsonError("Complete seu cadastro antes de comprar.", 409);
+  if (!ctx.tenantId) return jsonError("Escolha um estabelecimento antes de comprar.", 409);
   if (!ctx.tenantId) return jsonError("Seu perfil não está vinculado a um estabelecimento.", 409);
 
   const { data, response } = await parseBody(request, checkoutSchema);
