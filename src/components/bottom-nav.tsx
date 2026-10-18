@@ -35,7 +35,6 @@ const ICONS: Record<string, LucideIcon> = {
   "/admin": Building2,
   "/admin/estabelecimentos": Building2,
   "/portal": Home,
-  "/portal/eventos": CalendarDays,
   "/portal/ingressos": Ticket,
   "/portal/qr": QrCode,
   "/portal/termos": FileText,

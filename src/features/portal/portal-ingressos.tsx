@@ -13,13 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { encodeIngressoQr } from "@/features/checkin/qr";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn } from "cn";
-import type {
-  Espaco,
-  Evento,
-  Order,
-  Ticket as TicketRow,
-  TicketType,
-} from "@/types/database";
+import type { Espaco, Evento, Order, Ticket as TicketRow, TicketType } from "@/types/database";
 
 type PedidoCompleto = Order & {
   evento: Evento | null;

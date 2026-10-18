@@ -42,10 +42,6 @@ export async function PUT(request: Request) {
   if (guard.response) return guard.response;
   const ctx = guard.ctx!;
 
-  if (!ctx.tenantId) {
-    return jsonError("Escolha um estabelecimento antes de completar o cadastro.", 409);
-  }
-
   const { data, response } = await parseBody(request, pessoaSchema);
   if (response) return response;
   const values = data!;

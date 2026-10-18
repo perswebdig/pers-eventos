@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { CalendarDays, Database, MapPin, Plus, Users } from "lucide-react";
+import { CalendarDays, MapPin, Plus, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,15 +22,7 @@ import { Toolbar, ToolbarSearch } from "@/components/toolbar";
 import { EventoForm } from "./evento-form";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
 import { eventoStatusLabel, toEventoFormValues, type EventoFormValues } from "./evento-schema";
-import {
-  deleteEvento,
-  filtrarEventos,
-  getEvento,
-  inscricoesPorEvento,
-  listEventos,
-  saveEvento,
-} from "@/db/repos/eventos";
-import { seedLocalDatabase } from "@/db/seed";
+import type { Evento } from "@/types/database";
 import { formatDate } from "@/lib/format";
 import { cn } from "cn";
 
@@ -43,6 +34,8 @@ const STATUS_TONE: Record<string, StatusTone> = {
   cancelado: "danger",
 };
 
+type EventoComContagem = Evento & { inscricoes: { count: number }[] };
+
 const EventoDetailSheetLazy = dynamic(
   () => import("./evento-detail").then((m) => m.EventoDetailSheet),
   {
@@ -50,6 +43,17 @@ const EventoDetailSheetLazy = dynamic(
     ssr: false,
   },
 );
+
+function filtrarEventos(eventos: EventoComContagem[], termo: string): EventoComContagem[] {
+  const t = termo.trim().toLowerCase();
+  if (!t) return eventos;
+  return eventos.filter(
+    (e) =>
+      e.nome.toLowerCase().includes(t) ||
+      (e.local?.toLowerCase().includes(t) ?? false) ||
+      e.status.toLowerCase().includes(t),
+  );
+}
 
 export function EventosView() {
   const [termo, setTermo] = useState("");
@@ -59,11 +63,36 @@ export function EventosView() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [atualizando, setAtualizando] = useState(false);
 
-  const eventos = useLiveQuery(() => listEventos(), []);
-  const counts = useLiveQuery(() => inscricoesPorEvento(), []);
+  const [eventos, setEventos] = useState<EventoComContagem[] | null>(null);
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch("/api/eventos");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+      setEventos((body as { data: EventoComContagem[] }).data ?? []);
+    } catch (err) {
+      setEventos([]);
+      toast.error("Não foi possível carregar os eventos", {
+        description: (err as Error).message,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  async function recarregar() {
+    setAtualizando(true);
+    await carregar();
+    setAtualizando(false);
+  }
+
   const filtrados = useMemo(
-    () => (eventos ? filtrarEventos(eventos, termo) : eventos),
+    () => (eventos ? filtrarEventos(eventos, termo) : null),
     [eventos, termo],
   );
 
@@ -75,16 +104,9 @@ export function EventosView() {
       setFormValues(emptyValues);
       return;
     }
-    let ativo = true;
-    setFormValues(null);
-    void getEvento(editingId).then((ev) => {
-      if (!ativo || !ev) return;
-      setFormValues(toEventoFormValues(ev));
-    });
-    return () => {
-      ativo = false;
-    };
-  }, [formOpen, editingId, emptyValues]);
+    const ev = eventos?.find((e) => e.id === editingId);
+    setFormValues(ev ? toEventoFormValues(ev) : emptyValues);
+  }, [formOpen, editingId, eventos, emptyValues]);
 
   function abrirCriacao() {
     setEditingId(null);
@@ -103,31 +125,46 @@ export function EventosView() {
   }
 
   async function handleSubmit(values: EventoFormValues) {
-    const id = await saveEvento(values, editingId ?? undefined);
-    toast.success(editingId ? "Evento atualizado" : "Evento criado", {
-      description: "Salvo localmente — será sincronizado.",
-    });
-    setFormOpen(false);
-    setEditingId(null);
-    setDetailId(id);
-    setDetailOpen(true);
+    try {
+      const res = await fetch(editingId ? `/api/eventos/${editingId}` : "/api/eventos", {
+        method: editingId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao salvar");
+
+      const id = (body as { data?: { id?: string } }).data?.id ?? editingId;
+      toast.success(editingId ? "Evento atualizado" : "Evento criado");
+      setFormOpen(false);
+      setEditingId(null);
+      await recarregar();
+      if (id) {
+        setDetailId(id);
+        setDetailOpen(true);
+      }
+    } catch (err) {
+      toast.error("Não foi possível salvar", { description: (err as Error).message });
+    }
   }
 
   async function handleDelete() {
     if (!deleteId) return;
-    await deleteEvento(deleteId);
-    toast.success("Evento excluído");
-    setDeleteId(null);
-    setDetailOpen(false);
-    setDetailId(null);
+    try {
+      const res = await fetch(`/api/eventos/${deleteId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao excluir");
+      toast.success("Evento excluído");
+      setDeleteId(null);
+      setDetailOpen(false);
+      setDetailId(null);
+      await carregar();
+    } catch (err) {
+      toast.error("Não foi possível excluir", { description: (err as Error).message });
+    }
   }
 
-  async function handleSeed() {
-    const n = await seedLocalDatabase();
-    toast.success(n ? "Dados de exemplo adicionados" : "Já existem dados de exemplo");
-  }
-
-  const carregando = eventos === undefined;
+  const carregando = eventos === null;
   const lista = filtrados ?? [];
   const vazioSemBusca = !carregando && lista.length === 0 && !termo;
 
@@ -137,9 +174,20 @@ export function EventosView() {
         title="Eventos"
         description={carregando ? "Carregando…" : `${lista.length} evento(s)`}
         actions={
-          <Button onClick={abrirCriacao}>
-            <Plus className="size-4" /> Novo
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={recarregar}
+              disabled={atualizando}
+              aria-label="Recarregar"
+            >
+              <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
+            </Button>
+            <Button onClick={abrirCriacao}>
+              <Plus className="size-4" /> Novo
+            </Button>
+          </>
         }
       />
 
@@ -157,16 +205,11 @@ export function EventosView() {
         <EmptyState
           icon="calendar"
           title="Nenhum evento cadastrado"
-          description="Crie o primeiro evento ou carregue dados de exemplo."
+          description="Crie o primeiro evento do estabelecimento."
           actions={
-            <>
-              <Button onClick={abrirCriacao}>
-                <Plus className="size-4" /> Criar evento
-              </Button>
-              <Button variant="outline" onClick={handleSeed}>
-                <Database className="size-4" /> Dados de exemplo
-              </Button>
-            </>
+            <Button onClick={abrirCriacao}>
+              <Plus className="size-4" /> Criar evento
+            </Button>
           }
         />
       ) : lista.length === 0 ? (
@@ -178,7 +221,7 @@ export function EventosView() {
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {lista.map((evento) => {
-            const total = counts?.get(evento.id) ?? 0;
+            const total = evento.inscricoes?.[0]?.count ?? 0;
             const cheio = evento.capacidade !== null && total >= evento.capacidade;
             const pct =
               evento.capacidade && evento.capacidade > 0
@@ -259,7 +302,7 @@ export function EventosView() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar evento" : "Novo evento"}</DialogTitle>
             <DialogDescription>
-              Os dados são salvos no dispositivo e sincronizados automaticamente.
+              Os dados são salvos no estabelecimento e ficam disponíveis para toda a equipe.
             </DialogDescription>
           </DialogHeader>
           {formValues ? (
@@ -293,7 +336,7 @@ export function EventosView() {
           if (!open) setDeleteId(null);
         }}
         title="Excluir evento?"
-        description="Esta ação remove o evento, suas inscrições e termos relacionados neste dispositivo e, quando houver conexão, no servidor. Não pode ser desfeita."
+        description="Esta ação remove o evento, suas inscrições e termos relacionados. Não pode ser desfeita."
         confirmLabel="Excluir"
         destructive
         onConfirm={handleDelete}

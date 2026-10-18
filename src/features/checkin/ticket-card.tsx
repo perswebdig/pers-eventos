@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/status-badge";
-import type { TicketDetalhe } from "@/db/repos/ingressos";
+import type { TicketDetalhe } from "./tipos";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { cn } from "cn";
 
 // Cartão de conferência de um ingresso (QR "PERS2:<hash>").
-// O check-in é registrado localmente (Dexie) e sincronizado depois.
 export function TicketActionCard({
   det,
   onClose,

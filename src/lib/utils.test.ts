@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { onlyDigits, formatCpf, isValidCpf } from "@/lib/cpf";
 import { formatTelefone, formatDate, formatDateTime, calcularIdade, ehMenor } from "@/lib/format";
 import { pessoaSchema } from "@/features/pessoas/pessoa-schema";
 import { eventoFormSchema } from "@/features/eventos/evento-schema";
 import { parseInscricaoQr, encodeInscricaoQr } from "@/features/checkin/qr";
-import { toCSV } from "@/db/repos/relatorios";
+import { toCSV } from "@/lib/csv";
 
 describe("lib/cpf", () => {
   describe("onlyDigits", () => {

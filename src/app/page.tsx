@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Orbit, WifiOff } from "lucide-react";
+import { ArrowRight, Orbit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
@@ -16,9 +16,6 @@ export default function Home() {
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button render={<Link href="/dashboard" />}>
           Entrar no painel <ArrowRight className="size-4" />
-        </Button>
-        <Button variant="outline" render={<Link href="/offline" />}>
-          <WifiOff className="size-4" /> Modo offline
         </Button>
       </div>
     </main>

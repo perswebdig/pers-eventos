@@ -103,13 +103,3 @@ export async function requireTenant(): Promise<SessionContext & { tenantId: stri
   }
   return ctx as SessionContext & { tenantId: string };
 }
-
-// Exige um cliente com estabelecimento ativo no portal; sem escolha, volta ao
-// seletor em /portal.
-export async function requireEstabelecimento(): Promise<SessionContext & { tenantId: string }> {
-  const ctx = await requireRole(["cliente"]);
-  if (!ctx.tenantId) {
-    redirect("/portal");
-  }
-  return ctx as SessionContext & { tenantId: string };
-}

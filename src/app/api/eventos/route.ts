@@ -11,7 +11,7 @@ export async function GET() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("eventos")
-    .select("*")
+    .select("*, inscricoes(count)")
     .order("data_inicio", { ascending: true });
 
   if (error) return jsonError(error.message, 500);

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, MapPin, Pencil, Plus, Trash2, Square } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,16 +37,16 @@ import { QRCodeSVG } from "qrcode.react";
 import { encodeInscricaoQr } from "@/features/checkin/qr";
 import { LotesSection } from "@/features/ingressos/lotes-section";
 import { EspacosSection } from "./espacos-section";
-import {
-  addInscricao,
-  getEventoDetalhe,
-  listPessoasDisponiveis,
-  removeInscricao,
-  updateInscricao,
-} from "@/db/repos/eventos";
-import { resumoVendas } from "@/db/repos/ingressos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { INSCRICAO_STATUS, PAGAMENTO_STATUS, inscricaoStatusLabel } from "./evento-schema";
+import type { Evento, Inscricao, Pessoa } from "@/types/database";
+
+interface EventoDetalhe {
+  evento: Evento;
+  inscritos: Array<{ inscricao: Inscricao; pessoa: Pessoa | null }>;
+  disponiveis: Pessoa[];
+  vendas: { ingressosVendidos: number; receita: number };
+}
 
 const EVENTO_STATUS_TONE: Record<string, StatusTone> = {
   planejado: "info",
@@ -93,19 +92,8 @@ export function EventoDetailSheet({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const detalhe = useLiveQuery(
-    () => (eventoId ? getEventoDetalhe(eventoId) : Promise.resolve(null)),
-    [eventoId],
-  );
-  const disponiveis = useLiveQuery(
-    () => (eventoId ? listPessoasDisponiveis(eventoId) : Promise.resolve([])),
-    [eventoId],
-  );
-  const vendas = useLiveQuery(
-    () => (eventoId ? resumoVendas(eventoId) : Promise.resolve(null)),
-    [eventoId],
-  );
-
+  const [detalhe, setDetalhe] = useState<EventoDetalhe | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [novaPessoa, setNovaPessoa] = useState("");
   const [novoStatus, setNovoStatus] = useState("inscrito");
   const [novoPagamento, setNovoPagamento] = useState("pendente");
@@ -114,44 +102,104 @@ export function EventoDetailSheet({
   const [qrInscId, setQrInscId] = useState<string | null>(null);
   const [tab, setTab] = useState("inscritos");
 
+  const carregar = useCallback(async () => {
+    if (!eventoId) return;
+    try {
+      const res = await fetch(`/api/eventos/${eventoId}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+      setDetalhe((body as { data: EventoDetalhe }).data);
+      setErro(null);
+    } catch (err) {
+      setErro((err as Error).message);
+    }
+  }, [eventoId]);
+
+  useEffect(() => {
+    if (!open || !eventoId) {
+      setDetalhe(null);
+      setErro(null);
+      return;
+    }
+    setDetalhe(null);
+    void carregar();
+  }, [open, eventoId, carregar]);
+
   async function handleAdd() {
     if (!eventoId || !novaPessoa) {
       toast.error("Selecione uma pessoa para inscrever.");
       return;
     }
     try {
-      await addInscricao(eventoId, {
-        pessoa_id: novaPessoa,
-        status: novoStatus as (typeof INSCRICAO_STATUS)[number]["value"],
-        pagamento_status: novoPagamento as (typeof PAGAMENTO_STATUS)[number]["value"],
-        valor: novoValor,
-        forma_pagamento: "",
+      const res = await fetch(`/api/eventos/${eventoId}/inscricoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pessoa_id: novaPessoa,
+          status: novoStatus,
+          pagamento_status: novoPagamento,
+          valor: novoValor,
+          forma_pagamento: "",
+        }),
       });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error((body as { error?: string }).error ?? "Não foi possível inscrever");
+
       toast.success("Inscrição adicionada");
       setNovaPessoa("");
       setNovoValor("");
       setNovoStatus("inscrito");
       setNovoPagamento("pendente");
+      await carregar();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível inscrever");
     }
   }
 
+  async function handleStatusChange(inscricaoId: string, status: string) {
+    try {
+      const res = await fetch(`/api/inscricoes/${inscricaoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao atualizar");
+      toast.success("Inscrição atualizada");
+      await carregar();
+    } catch (err) {
+      toast.error("Não foi possível atualizar", { description: (err as Error).message });
+    }
+  }
+
   async function handleRemove() {
     if (!removerId) return;
-    await removeInscricao(removerId);
-    toast.success("Inscrição removida");
-    setRemoverId(null);
+    try {
+      const res = await fetch(`/api/inscricoes/${removerId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao remover");
+      toast.success("Inscrição removida");
+      setRemoverId(null);
+      await carregar();
+    } catch (err) {
+      toast.error("Não foi possível remover", { description: (err as Error).message });
+    }
   }
 
   const capacidade = detalhe?.evento.capacidade ?? null;
-  const total = detalhe?.totalInscritos ?? 0;
+  const total = detalhe?.inscritos.length ?? 0;
   const cheio = capacidade !== null && total >= capacidade;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-        {!detalhe ? (
+        {erro ? (
+          <div className="space-y-2 p-4">
+            <p className="text-sm font-medium">Não foi possível carregar</p>
+            <p className="text-sm text-muted-foreground">{erro}</p>
+          </div>
+        ) : !detalhe ? (
           <div className="space-y-3 p-4">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-24 w-full" />
@@ -195,9 +243,9 @@ export function EventoDetailSheet({
                 </div>
                 <div className="rounded-lg border bg-muted/30 p-2.5">
                   <p className="text-xs text-muted-foreground">Ingressos vendidos</p>
-                  <p className="font-semibold">{vendas?.ingressosVendidos ?? 0}</p>
+                  <p className="font-semibold">{detalhe.vendas.ingressosVendidos}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(vendas?.receita ?? 0)}
+                    {formatCurrency(detalhe.vendas.receita)}
                   </p>
                 </div>
               </div>
@@ -259,11 +307,9 @@ export function EventoDetailSheet({
                           <div className="mt-2 flex items-center gap-2">
                             <Select
                               value={inscricao.status}
-                              onValueChange={(v) =>
-                                updateInscricao(inscricao.id, {
-                                  status: v as (typeof INSCRICAO_STATUS)[number]["value"],
-                                })
-                              }
+                              onValueChange={(v) => {
+                                if (v) void handleStatusChange(inscricao.id, v);
+                              }}
                             >
                               <SelectTrigger size="sm" className="flex-1">
                                 <SelectValue />
@@ -293,7 +339,7 @@ export function EventoDetailSheet({
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Nova inscrição
                     </h3>
-                    {disponiveis && disponiveis.length > 0 ? (
+                    {detalhe.disponiveis.length > 0 ? (
                       <div className="grid gap-3">
                         <div className="grid gap-1.5">
                           <Label htmlFor="nova_pessoa">Pessoa</Label>
@@ -305,7 +351,7 @@ export function EventoDetailSheet({
                               <SelectValue placeholder="Selecione…" />
                             </SelectTrigger>
                             <SelectContent>
-                              {disponiveis.map((p) => (
+                              {detalhe.disponiveis.map((p) => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.nome_completo}
                                 </SelectItem>
@@ -367,9 +413,7 @@ export function EventoDetailSheet({
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        {disponiveis === undefined
-                          ? "Carregando…"
-                          : "Todas as pessoas já estão inscritas — cadastre mais pessoas primeiro."}
+                        Todas as pessoas já estão inscritas — cadastre mais pessoas primeiro.
                       </p>
                     )}
                   </div>

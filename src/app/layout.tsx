@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { OfflineIndicator } from "@/components/offline-indicator";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
@@ -23,11 +22,6 @@ export const metadata: Metadata = {
   },
   description: APP_DESCRIPTION,
   applicationName: APP_NAME,
-  appleWebApp: {
-    capable: true,
-    title: APP_NAME,
-    statusBarStyle: "default",
-  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -62,7 +56,6 @@ export default function RootLayout({
           >
             Pular para o conteúdo principal
           </a>
-          <OfflineIndicator />
           {children}
           <Toaster position="top-center" />
         </ThemeProvider>

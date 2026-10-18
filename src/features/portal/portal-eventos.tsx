@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, MapPin, Ticket } from "lucide-react";
+import { Building2, CalendarDays, MapPin, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,7 +10,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { Toolbar, ToolbarSearch } from "@/components/toolbar";
 import { EmptyState } from "@/components/empty-state";
+import { formatCurrency } from "@/lib/format";
 import type { Evento, Inscricao } from "@/types/database";
+
+type EventoFeed = Evento & {
+  estabelecimento: { nome: string; cidade: string | null; estado: string | null } | null;
+  ticket_types: { price: number; is_active: boolean }[];
+  espacos: { price: number; is_active: boolean }[];
+};
+
+function menorPreco(evento: EventoFeed): number | null {
+  const precos = [
+    ...(evento.ticket_types ?? []).filter((t) => t.is_active).map((t) => Number(t.price)),
+    ...(evento.espacos ?? []).filter((e) => e.is_active).map((e) => Number(e.price)),
+  ];
+  return precos.length > 0 ? Math.min(...precos) : null;
+}
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -19,8 +34,9 @@ async function getJson<T>(url: string): Promise<T> {
   return (body as { data: T }).data;
 }
 
+// Feed público: eventos abertos de todos os estabelecimentos ativos.
 export function PortalEventos() {
-  const [eventos, setEventos] = useState<Evento[] | null>(null);
+  const [eventos, setEventos] = useState<EventoFeed[] | null>(null);
   const [inscritos, setInscritos] = useState<Set<string>>(new Set());
   const [enviando, setEnviando] = useState<string | null>(null);
   const [termo, setTermo] = useState("");
@@ -28,7 +44,7 @@ export function PortalEventos() {
   const carregar = useCallback(async () => {
     try {
       const [ev, ins] = await Promise.all([
-        getJson<Evento[]>("/api/portal/eventos"),
+        getJson<EventoFeed[]>("/api/portal/eventos"),
         getJson<Inscricao[]>("/api/portal/inscricoes"),
       ]);
       setEventos(ev);
@@ -73,7 +89,9 @@ export function PortalEventos() {
     return eventos.filter(
       (evento) =>
         evento.nome.toLowerCase().includes(busca) ||
-        (evento.local ?? "").toLowerCase().includes(busca),
+        (evento.local ?? "").toLowerCase().includes(busca) ||
+        (evento.estabelecimento?.nome ?? "").toLowerCase().includes(busca) ||
+        (evento.estabelecimento?.cidade ?? "").toLowerCase().includes(busca),
     );
   }, [eventos, termo]);
 
@@ -91,7 +109,7 @@ export function PortalEventos() {
       <EmptyState
         icon="calendar"
         title="Nenhum evento disponível"
-        description="Novos eventos do estabelecimento aparecerão aqui."
+        description="Eventos abertos dos estabelecimentos aparecerão aqui."
       />
     );
   }
@@ -102,7 +120,7 @@ export function PortalEventos() {
         <ToolbarSearch
           value={termo}
           onValueChange={setTermo}
-          placeholder="Buscar por nome ou local"
+          placeholder="Buscar por evento, local ou estabelecimento"
         />
       </Toolbar>
 
@@ -110,12 +128,14 @@ export function PortalEventos() {
         <EmptyState
           icon="search"
           title="Nenhum resultado"
-          description="Tente outro nome ou local."
+          description="Tente outro nome, local ou estabelecimento."
         />
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {(filtrados ?? []).map((evento) => {
             const jaInscrito = inscritos.has(evento.id);
+            const preco = menorPreco(evento);
+            const estabelecimento = evento.estabelecimento;
             return (
               <li key={evento.id}>
                 <Card className="h-full gap-3 p-4">
@@ -134,11 +154,32 @@ export function PortalEventos() {
                           </span>
                         ) : null}
                       </div>
+                      {estabelecimento ? (
+                        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Building2 className="size-3.5" />
+                          {estabelecimento.nome}
+                          {estabelecimento.cidade ? ` · ${estabelecimento.cidade}` : ""}
+                        </p>
+                      ) : null}
                     </div>
                     {jaInscrito ? <StatusBadge tone="success">Inscrito</StatusBadge> : null}
                   </div>
 
-                  <div className="mt-auto flex gap-2">
+                  <div className="mt-auto flex items-center gap-2">
+                    {preco !== null ? (
+                      <p className="mr-auto text-xs text-muted-foreground">
+                        {preco === 0 ? (
+                          <span className="font-medium text-success">Grátis</span>
+                        ) : (
+                          <>
+                            A partir de{" "}
+                            <span className="font-semibold text-foreground">
+                              {formatCurrency(preco)}
+                            </span>
+                          </>
+                        )}
+                      </p>
+                    ) : null}
                     <Button
                       size="sm"
                       variant="outline"

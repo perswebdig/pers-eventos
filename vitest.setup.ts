@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { beforeEach, afterEach, vi } from "vitest";
 
 // Mock next/navigation

@@ -33,17 +33,25 @@ export async function POST(request: Request) {
   if (!ctx.pessoaId) {
     return jsonError("Complete seu cadastro antes de se inscrever.", 409);
   }
-  if (!ctx.tenantId) {
-    return jsonError("Escolha um estabelecimento antes de se inscrever.", 409);
-  }
 
   const { data, response } = await parseBody(request, inscricaoSchema);
   if (response) return response;
 
   const supabase = await createClient();
+
+  // O vínculo com o estabelecimento nasce da inscrição: o evento define o tenant.
+  const { data: evento, error: eventoError } = await supabase
+    .from("eventos")
+    .select("id, tenant_id")
+    .eq("id", data!.evento_id)
+    .maybeSingle();
+  if (eventoError) return jsonError(eventoError.message, 500);
+  if (!evento) return jsonError("Evento não encontrado.", 404);
+
   const { data: created, error } = await supabase
     .from("inscricoes")
     .insert({
+      tenant_id: evento.tenant_id,
       pessoa_id: ctx.pessoaId,
       evento_id: data!.evento_id,
       status: "inscrito",

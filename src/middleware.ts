@@ -6,8 +6,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Roda em tudo, exceto assets estáticos, imagens e o service worker.
+  // Roda em tudo, exceto assets estáticos e imagens.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.webmanifest|sw.js|workbox-.*|fallback-.*|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico)$).*)",
   ],
 };

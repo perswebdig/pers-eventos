@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AssinaturaCanvas } from "./assinatura-canvas";
-import { registrarAceiteTermo } from "@/db/repos/termos";
 import { termoTexto, termoTipoLabel, type TermoTipo } from "./termo-schema";
 
 interface TermoAceiteSheetProps {
@@ -51,15 +50,18 @@ export function TermoAceiteSheet({
     }
     setEnviando(true);
     try {
-      await registrarAceiteTermo(
-        {
+      const res = await fetch("/api/termos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           pessoa_id: pessoaId,
-          evento_id: eventoId ?? undefined,
+          evento_id: eventoId ?? null,
           tipo,
           assinatura_base64: assinatura,
-        },
-        null, // IP será preenchido pelo servidor no sync
-      );
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao registrar");
       toast.success(`${termoTipoLabel(tipo)} aceito com sucesso!`);
       onOpenChange(false);
       onSuccess?.();

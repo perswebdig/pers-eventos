@@ -6,18 +6,53 @@ import type { Evento } from "@/types/database";
 
 type Params = { params: Promise<{ id: string }> };
 
-// GET /api/eventos/:id
+// GET /api/eventos/:id — detalhe com inscritos, pessoas disponíveis e vendas.
 export async function GET(_request: Request, { params }: Params) {
   const guard = await apiSession(["tenant_admin", "staff"]);
   if (guard.response) return guard.response;
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("eventos").select("*").eq("id", id).maybeSingle();
+  const { data: evento, error } = await supabase
+    .from("eventos")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) return jsonError(error.message, 500);
-  if (!data) return jsonError("Evento não encontrado.", 404);
-  return NextResponse.json({ data });
+  if (!evento) return jsonError("Evento não encontrado.", 404);
+
+  const { data: inscricoes } = await supabase
+    .from("inscricoes")
+    .select("*, pessoa:pessoas(*)")
+    .eq("evento_id", id);
+
+  const inscritos = [...(inscricoes ?? [])].sort((a, b) =>
+    (a.pessoa?.nome_completo ?? "").localeCompare(b.pessoa?.nome_completo ?? ""),
+  );
+
+  const { data: pessoas } = await supabase
+    .from("pessoas")
+    .select("*")
+    .order("nome_completo", { ascending: true });
+
+  const inscritosIds = new Set(inscritos.map((i) => i.pessoa_id));
+  const disponiveis = (pessoas ?? []).filter((p) => !inscritosIds.has(p.id));
+
+  const { data: pedidosPagos } = await supabase
+    .from("orders")
+    .select("quantity, total_amount")
+    .eq("event_id", id)
+    .eq("status", "paid");
+
+  const vendas = {
+    ingressosVendidos: (pedidosPagos ?? []).reduce((acc, o) => acc + o.quantity, 0),
+    receita: (pedidosPagos ?? []).reduce((acc, o) => acc + Number(o.total_amount), 0),
+  };
+
+  return NextResponse.json({
+    data: { evento, inscritos, disponiveis, vendas },
+  });
 }
 
 // PATCH /api/eventos/:id — atualiza (Admin do Estabelecimento).

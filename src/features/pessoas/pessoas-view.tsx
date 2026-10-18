@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Database, Link2, Loader2, Plus, RefreshCw, UserPlus } from "lucide-react";
+import { Link2, Loader2, Plus, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,23 +19,13 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge } from "@/components/status-badge";
 import { Toolbar, ToolbarSearch } from "@/components/toolbar";
-import { SyncStatusBadge } from "@/components/sync-status-badge";
 import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
 import { PessoaForm } from "./pessoa-form";
 import { toPessoaFormValues, type PessoaFormValues } from "./pessoa-schema";
+import { filtrarPessoas } from "./busca";
 import { interpretarBusca } from "./vincular-schema";
-import type { Pessoa } from "@/types/database";
-import { LocalSyncFields } from "@/db/types";
-import {
-  deletePessoa,
-  filtrarPessoas,
-  getPessoaDetalhe,
-  listPessoas,
-  savePessoa,
-} from "@/db/repos/pessoas";
-import { seedLocalDatabase } from "@/db/seed";
+import type { Menor, Pessoa } from "@/types/database";
 import { formatCpf, formatTelefone } from "@/lib/format";
 
 const PessoaDetailSheetLazy = dynamic(
@@ -47,20 +36,7 @@ const PessoaDetailSheetLazy = dynamic(
   },
 );
 
-type PessoaComSync = Pessoa & Partial<LocalSyncFields>;
-
-async function fetchServerPessoas(): Promise<PessoaComSync[]> {
-  try {
-    const res = await fetch("/api/pessoas");
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro");
-    return (body as { data: Pessoa[] }).data ?? [];
-  } catch {
-    return [];
-  }
-}
-
-function PessoaIdentidade({ pessoa }: { pessoa: PessoaComSync }) {
+function PessoaIdentidade({ pessoa }: { pessoa: Pessoa }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-sm font-medium text-primary">
@@ -79,63 +55,40 @@ export function PessoasView() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [usarLocal, setUsarLocal] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
   const [vincularOpen, setVincularOpen] = useState(false);
   const [buscaVinculo, setBuscaVinculo] = useState("");
   const [vinculando, setVinculando] = useState(false);
 
-  const pessoasLocal = useLiveQuery(() => listPessoas(), []);
+  const [pessoas, setPessoas] = useState<Pessoa[] | null>(null);
 
-  const [pessoasCombinadas, setPessoasCombinadas] = useState<PessoaComSync[] | null>(null);
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pessoas");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+      setPessoas((body as { data: Pessoa[] }).data ?? []);
+    } catch (err) {
+      setPessoas([]);
+      toast.error("Não foi possível carregar as pessoas", {
+        description: (err as Error).message,
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    if (usarLocal) {
-      setPessoasCombinadas(pessoasLocal ?? []);
-      return;
-    }
-
-    let ativo = true;
-    setPessoasCombinadas(null);
-    fetchServerPessoas()
-      .then((server) => {
-        if (!ativo) return;
-        if (server.length > 0) {
-          setPessoasCombinadas(server);
-        } else if (pessoasLocal !== undefined) {
-          setPessoasCombinadas(pessoasLocal);
-          setUsarLocal(true);
-          toast.info("Modo offline — usando dados locais");
-        } else {
-          setPessoasCombinadas([]);
-        }
-      })
-      .catch(() => {
-        if (!ativo) return;
-        if (pessoasLocal !== undefined) {
-          setPessoasCombinadas(pessoasLocal);
-          setUsarLocal(true);
-          toast.info("Sem conexão — usando dados locais");
-        } else {
-          setPessoasCombinadas([]);
-        }
-      });
-    return () => {
-      ativo = false;
-    };
-  }, [pessoasLocal, usarLocal]);
+    void carregar();
+  }, [carregar]);
 
   async function recarregar() {
     setAtualizando(true);
-    setUsarLocal(false);
-    setPessoasCombinadas(null);
-    await new Promise((r) => setTimeout(r, 100));
+    await carregar();
     setAtualizando(false);
   }
 
   const filtradas = useMemo(
-    () => (pessoasCombinadas ? filtrarPessoas(pessoasCombinadas, termo) : pessoasCombinadas),
-    [pessoasCombinadas, termo],
+    () => (pessoas ? filtrarPessoas(pessoas, termo) : null),
+    [pessoas, termo],
   );
 
   const emptyValues = useMemo(() => toPessoaFormValues({}), []);
@@ -148,16 +101,27 @@ export function PessoasView() {
     }
     let ativo = true;
     setFormValues(null);
-    void getPessoaDetalhe(editingId).then((det) => {
-      if (!ativo || !det) return;
-      setFormValues(
-        toPessoaFormValues({
-          ...det.pessoa,
-          responsavel_nome: det.menor?.responsavel_nome ?? "",
-          responsavel_cpf: det.menor?.responsavel_cpf ?? "",
-        } as Partial<Pessoa>),
-      );
-    });
+    fetch(`/api/pessoas/${editingId}`)
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro");
+        return body as { data: { pessoa: Pessoa; menor: Menor | null } };
+      })
+      .then(({ data }) => {
+        if (!ativo || !data?.pessoa) return;
+        setFormValues(
+          toPessoaFormValues({
+            ...data.pessoa,
+            responsavel_nome: data.menor?.responsavel_nome ?? "",
+            responsavel_cpf: data.menor?.responsavel_cpf ?? "",
+          } as Partial<Pessoa>),
+        );
+      })
+      .catch((err: Error) => {
+        if (!ativo) return;
+        toast.error("Não foi possível carregar a pessoa", { description: err.message });
+        setFormOpen(false);
+      });
     return () => {
       ativo = false;
     };
@@ -180,28 +144,43 @@ export function PessoasView() {
   }
 
   async function handleSubmit(values: PessoaFormValues) {
-    const id = await savePessoa(values, editingId ?? undefined);
-    toast.success(editingId ? "Pessoa atualizada" : "Pessoa cadastrada", {
-      description: "Salvo localmente — será sincronizado.",
-    });
-    setFormOpen(false);
-    setEditingId(null);
-    setDetailId(id);
-    setDetailOpen(true);
+    try {
+      const res = await fetch(editingId ? `/api/pessoas/${editingId}` : "/api/pessoas", {
+        method: editingId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao salvar");
+
+      const id = (body as { data?: { id?: string } }).data?.id ?? editingId;
+      toast.success(editingId ? "Pessoa atualizada" : "Pessoa cadastrada");
+      setFormOpen(false);
+      setEditingId(null);
+      await recarregar();
+      if (id) {
+        setDetailId(id);
+        setDetailOpen(true);
+      }
+    } catch (err) {
+      toast.error("Não foi possível salvar", { description: (err as Error).message });
+    }
   }
 
   async function handleDelete() {
     if (!deleteId) return;
-    await deletePessoa(deleteId);
-    toast.success("Pessoa excluída");
-    setDeleteId(null);
-    setDetailOpen(false);
-    setDetailId(null);
-  }
-
-  async function handleSeed() {
-    const n = await seedLocalDatabase();
-    toast.success(n ? `${n} pessoas de exemplo adicionadas` : "Já existem dados de exemplo");
+    try {
+      const res = await fetch(`/api/pessoas/${deleteId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao excluir");
+      toast.success("Pessoa excluída");
+      setDeleteId(null);
+      setDetailOpen(false);
+      setDetailId(null);
+      await carregar();
+    } catch (err) {
+      toast.error("Não foi possível excluir", { description: (err as Error).message });
+    }
   }
 
   async function handleVincular() {
@@ -237,12 +216,11 @@ export function PessoasView() {
     }
   }
 
-  const carregando = pessoasCombinadas === null && !usarLocal;
-  const carregandoLocal = pessoasLocal === undefined;
+  const carregando = pessoas === null;
   const lista = filtradas ?? [];
-  const vazioSemBusca = !carregando && !carregandoLocal && lista.length === 0 && !termo;
+  const vazioSemBusca = !carregando && lista.length === 0 && !termo;
 
-  const columns: DataTableColumn<PessoaComSync>[] = [
+  const columns: DataTableColumn<Pessoa>[] = [
     {
       key: "pessoa",
       header: "Pessoa",
@@ -269,12 +247,14 @@ export function PessoasView() {
         ),
     },
     {
-      key: "sync",
-      header: "Sync",
-      align: "right",
-      cell: (pessoa) => (
-        <SyncStatusBadge status={pessoa.sync_status ?? "synced"} withLabel={false} />
-      ),
+      key: "email",
+      header: "E-mail",
+      cell: (pessoa) =>
+        pessoa.email ? (
+          <span className="truncate">{pessoa.email}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
   ];
 
@@ -282,12 +262,7 @@ export function PessoasView() {
     <PageContainer>
       <PageHeader
         title="Pessoas"
-        description={
-          <span className="inline-flex flex-wrap items-center gap-2">
-            {carregando || carregandoLocal ? "Carregando…" : `${lista.length} registro(s)`}
-            {usarLocal ? <StatusBadge tone="warning">Offline</StatusBadge> : null}
-          </span>
-        }
+        description={carregando ? "Carregando…" : `${lista.length} registro(s)`}
         actions={
           <>
             <Button
@@ -295,7 +270,7 @@ export function PessoasView() {
               size="icon"
               onClick={recarregar}
               disabled={atualizando}
-              aria-label="Recarregar do servidor"
+              aria-label="Recarregar"
             >
               <RefreshCw className={`size-4 ${atualizando ? "animate-spin" : ""}`} />
             </Button>
@@ -323,16 +298,11 @@ export function PessoasView() {
         <EmptyState
           icon="users"
           title="Nenhuma pessoa cadastrada"
-          description="Cadastre a primeira pessoa ou carregue dados de exemplo."
+          description="Cadastre a primeira pessoa ou vincule alguém que já usa a plataforma."
           actions={
-            <>
-              <Button onClick={abrirCriacao}>
-                <UserPlus className="size-4" /> Cadastrar
-              </Button>
-              <Button variant="outline" onClick={handleSeed}>
-                <Database className="size-4" /> Dados de exemplo
-              </Button>
-            </>
+            <Button onClick={abrirCriacao}>
+              <UserPlus className="size-4" /> Cadastrar
+            </Button>
           }
         />
       ) : (
@@ -357,7 +327,6 @@ export function PessoasView() {
                     .join(" · ") || "Sem CPF/telefone"}
                 </p>
               </div>
-              <SyncStatusBadge status={pessoa.sync_status ?? "synced"} withLabel={false} />
             </div>
           )}
         />
@@ -374,7 +343,7 @@ export function PessoasView() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar pessoa" : "Nova pessoa"}</DialogTitle>
             <DialogDescription>
-              Os dados são salvos no dispositivo e sincronizados automaticamente.
+              Os dados são salvos no estabelecimento e ficam disponíveis para toda a equipe.
             </DialogDescription>
           </DialogHeader>
           {formValues ? (
@@ -453,7 +422,7 @@ export function PessoasView() {
           if (!open) setDeleteId(null);
         }}
         title="Excluir pessoa?"
-        description="Esta ação remove a pessoa e seus dados relacionados neste dispositivo e, quando houver conexão, no servidor. Não pode ser desfeita."
+        description="Esta ação remove a pessoa e seus dados relacionados. Não pode ser desfeita."
         confirmLabel="Excluir"
         destructive
         onConfirm={handleDelete}

@@ -18,8 +18,6 @@ export async function POST(request: Request) {
   const ctx = guard.ctx!;
 
   if (!ctx.pessoaId) return jsonError("Complete seu cadastro antes de comprar.", 409);
-  if (!ctx.tenantId) return jsonError("Escolha um estabelecimento antes de comprar.", 409);
-  if (!ctx.tenantId) return jsonError("Seu perfil não está vinculado a um estabelecimento.", 409);
 
   const { data, response } = await parseBody(request, checkoutSchema);
   if (response) return response;
@@ -71,6 +69,8 @@ export async function POST(request: Request) {
   const { data: created, error } = await supabase
     .from("orders")
     .insert({
+      // O pedido pertence ao estabelecimento do evento (vínculo nasce da compra).
+      tenant_id: lote.tenant_id,
       customer_id: ctx.pessoaId,
       event_id: lote.event_id,
       ticket_type_id: lote.id,

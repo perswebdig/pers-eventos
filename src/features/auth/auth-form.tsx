@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -146,8 +145,7 @@ export function AuthForm() {
         </div>
         <CardTitle>Entrar no {APP_NAME}</CardTitle>
         <CardDescription>
-          Acesse com e-mail e senha. Seus dados ficam no dispositivo e sincronizam quando houver
-          conexão.
+          Acesse com e-mail e senha para gerenciar eventos, pessoas e check-ins.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
@@ -159,11 +157,8 @@ export function AuthForm() {
             <p className="mt-1 text-muted-foreground">
               Defina <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
               <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> em <code>.env.local</code> e reinicie o
-              servidor. Sem isso o app funciona apenas offline.
+              servidor.
             </p>
-            <Button variant="outline" className="mt-3" render={<Link href="/dashboard" />}>
-              Continuar offline
-            </Button>
           </div>
         ) : (
           <Tabs value={modo} onValueChange={(v) => setModo(v as "signin" | "signup")}>

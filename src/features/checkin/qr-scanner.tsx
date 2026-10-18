@@ -8,7 +8,7 @@ interface BarcodeDetectorLike {
 
 type BarcodeDetectorCtor = new (options?: { formats?: string[] }) => BarcodeDetectorLike;
 
-// O leitor usa a API nativa `BarcodeDetector` (Chromium). Funciona offline.
+// O leitor usa a API nativa `BarcodeDetector` (Chromium).
 export function isQrScanSupported(): boolean {
   return (
     typeof window !== "undefined" &&

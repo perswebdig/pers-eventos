@@ -1,35 +1,34 @@
 # PersEventos
 
-Sistema web **offline-first** (PWA) para cadastro de pessoas, eventos e check-in
-em espaços que recebem visitantes em vivências na natureza (retiros, glamping,
-sítios, fazendas, centros de terapia).
+Plataforma SaaS **multi-tenant** para cadastro de pessoas, eventos e check-in em
+espaços que recebem visitantes em vivências na natureza (retiros, glamping,
+sítios, fazendas, centros de terapia), com venda de ingressos e portal do cliente.
 
 - **Next.js 15** (App Router) + TypeScript estrito
 - **Tailwind CSS v4** + **shadcn/ui**
-- **PWA** com Service Worker (`@ducanh2912/next-pwa`, fork mantido do `next-pwa`)
-- **Offline** com **Dexie.js** (IndexedDB) como fonte local primária
-- **Backend** Supabase (Postgres + Auth + RLS)
-- **Estado** Zustand · **Formulários** React Hook Form + Zod
+- **Backend** Supabase (Postgres + Auth + RLS) — fonte da verdade, 100% online
+- **Formulários** React Hook Form + Zod
 - **QR Code** `qrcode.react`
 - **Multitenant** com RBAC (`super_admin`, `tenant_admin`, `staff`, `cliente`)
-- **Deploy** Supabase Cloud + PM2 ou Docker (com `restart: always`)
+- **Deploy** Supabase Cloud + PM2/nginx
 
 ## Status
 
 | Passo | Módulo                           | Situação     |
 | ----- | -------------------------------- | ------------ |
-| 1     | Setup do projeto + PWA           | ✅ concluído |
-| 2     | Schema Supabase + Dexie          | ✅ concluído |
-| 3     | Sync engine                      | ✅ concluído |
-| 4     | Cadastro de pessoas (offline)    | ✅ concluído |
+| 1     | Setup do projeto                 | ✅ concluído |
+| 2     | Schema Supabase                  | ✅ concluído |
+| 3     | Fundação de dados online         | ✅ concluído |
+| 4     | Cadastro de pessoas              | ✅ concluído |
 | 5     | Eventos + inscrições             | ✅ concluído |
 | 6     | Check-in por QR                  | ✅ concluído |
 | 7     | Termos + LGPD                    | ✅ concluído |
 | 8     | Relatórios                       | ✅ concluído |
 | 9     | Polimento UX                     | ✅ concluído |
 | 10    | Multitenant + 3 níveis de acesso | ✅ concluído |
-| 11    | Deploy PM2/Docker (background)   | ✅ concluído |
+| 11    | Deploy PM2/nginx (produção)      | ✅ concluído |
 | 12    | Financeiro + Ingressos           | ✅ concluído |
+| 13    | Feed público + portal do cliente | ✅ concluído |
 
 > **Auth + perfis**: login por e-mail/senha. O **primeiro usuário** vira
 > `super_admin` (trigger `handle_new_user`); os demais entram como `cliente`.
@@ -40,90 +39,69 @@ sítios, fazendas, centros de terapia).
 ```
 src/
   app/
-    layout.tsx              # shell raiz: tema, toaster, banner offline
+    layout.tsx              # shell raiz: tema e toaster
     page.tsx                # landing
-    manifest.ts             # manifest PWA (metadata route)
-    offline/page.tsx        # fallback offline (precacheado pelo SW)
-    (app)/                  # área autenticada (com AppHeader)
+    (app)/                  # área autenticada do tenant (com AppHeader)
       layout.tsx
       dashboard|pessoas|eventos|checkin|relatorios|termos/page.tsx
+      pedidos/page.tsx · usuarios/page.tsx
     admin/                  # Super Admin (super_admin)
       layout.tsx · page.tsx · estabelecimentos/page.tsx
     portal/                 # Portal do Cliente (cliente)
       layout.tsx · page.tsx
-      cadastro|eventos|qr|termos/page.tsx
-    api/                    # Route Handlers (RBAC + admin client)
+      cadastro|eventos|ingressos|qr|termos/page.tsx
+    api/                    # Route Handlers (RBAC + RLS)
       me · health
       admin/estabelecimentos[/:id]
-      eventos[/:id] · usuarios[/:id]
-      portal/{perfil,eventos,inscricoes,termos}
+      pessoas[/:id] · eventos[/:id] · eventos/:id/inscricoes
+      inscricoes[/:id] · inscricoes/:id/{checkin,checkout}
+      tickets · tickets/:id/checkin
+      termos · logs-acesso · relatorios · relatorios/exportar
+      usuarios[/:id]
+      tenant/{ticket-types,espacos,pedidos,pessoas}
+      portal/{perfil,eventos,inscricoes,termos,pedidos,checkout,reservas,espacos}
+      checkout · webhooks/payment
     login|onboarding/page.tsx
   components/
     ui/                     # shadcn/ui
-    app-header.tsx · theme-provider.tsx · theme-toggle.tsx
-    user-menu.tsx · offline-indicator.tsx · page-placeholder.tsx
+    app-header.tsx · bottom-nav.tsx · stat-card.tsx · status-badge.tsx
+    charts.tsx · data-table.tsx · empty-state.tsx · theme-provider.tsx
   features/
-    auth/
-      auth-form.tsx         # entrar / criar conta (Supabase Auth)
+    auth/auth-form.tsx      # entrar / criar conta (Supabase Auth)
     admin/                  # UI do Super Admin
-      estabelecimento-schema.ts · usuario-schema.ts
-      estabelecimento-form.tsx · estabelecimentos-view.tsx
-    portal/                 # UI do Cliente
-      portal-perfil-form.tsx · portal-eventos.tsx
-      portal-qr.tsx · portal-termos.tsx
+    portal/                 # UI do Cliente (feed, checkout, carteira)
     pessoas/
       pessoa-schema.ts      # validação Zod (+ regras de menor/LGPD)
-      pessoa-form.tsx       # formulário (RHF + shadcn)
-      pessoa-detail.tsx     # ficha em Sheet + histórico
-      pessoas-view.tsx      # lista, busca, CRUD offline
+      pessoa-form.tsx · pessoa-detail.tsx · pessoas-view.tsx · busca.ts
     eventos/
-      evento-schema.ts      # validação Zod de evento/inscrição + labels
-      evento-form.tsx       # formulário de evento (RHF + shadcn)
+      evento-schema.ts · evento-form.tsx
       evento-detail.tsx     # ficha + inscritos + nova inscrição + QR
-      eventos-view.tsx      # lista, busca, CRUD offline
+      eventos-view.tsx
+    ingressos/              # lotes + mapa de assentos
     checkin/
       qr.ts                 # encode/decode payload do QR
-      qr-scanner.tsx        # leitor nativo (BarcodeDetector) + fallback
-      checkin-view.tsx      # tela de recepção: câmera, busca manual, ações
+      qr-scanner.tsx        # leitor nativo (BarcodeDetector)
+      checkin-view.tsx      # recepção: câmera, busca manual, ações
     termos/
-      termo-schema.ts       # Zod + textos dos termos (responsabilidade/imagem)
-      assinatura-canvas.tsx # canvas de assinatura (touch/mouse)
-      termo-aceite-sheet.tsx # Sheet: texto + assinatura + aceite
-      termos-view.tsx       # lista de termos aceitos + log LGPD
-  hooks/
-    use-online-status.ts
-  db/
-    repos/
-      pessoas.ts            # repositório local (CRUD + histórico)
-      eventos.ts            # repositório local (CRUD + inscrições)
-      termos.ts             # repositório local (termos + assinaturas + log LGPD)
-    db.ts                   # migrations do Dexie (IndexedDB)
-    types.ts                # tipos locais (+ sync_status)
-    queue.ts                # grava local (pending) + enfileira operações
-    seed.ts                 # dados fake para testar sync/UI
-  sync/
-    engine.ts               # push/pull + resolução de conflito (LWW)
-    supabase-transport.ts   # transporte Supabase
-    worker.ts               # loop em background + syncNow()
-  stores/
-    sync-store.ts           # estado do sync (Zustand)
+      termo-schema.ts · assinatura-canvas.tsx
+      termo-aceite-sheet.tsx · termos-view.tsx
+    pedidos/                # pedidos do tenant (confirmar/cancelar)
+    relatorios/             # resumos + exportação CSV + gráficos
   lib/
-    constants.ts · env.ts · env.server.ts · utils.ts
-    cpf.ts                  # validação/formatacão de CPF
-    format.ts               # telefone, datas, idade, menor
+    constants.ts · env.ts · env.server.ts · utils.ts · csv.ts
+    cpf.ts · format.ts
     auth/{roles,session,api}.ts  # RBAC, sessão e helpers de API
     supabase/{client,server,middleware,admin}.ts
   types/database.ts
   middleware.ts             # renovação de sessão + proteção de rotas
 supabase/
-  migrations/*.sql          # schema, RLS, storage e multitenant
+  migrations/*.sql          # schema, RLS, storage, ticketing e feed
   seed.sql                  # 10 pessoas, 2 eventos
 prisma/
   schema.prisma             # schema de referência (modelagem)
 scripts/
-  generate-icons.mjs        # ícones PNG do PWA
-  deploy.sh                 # build + PM2 (ou --docker)
-  verify-*.ts               # smoke tests (dexie, sync, pessoas…)
+  generate-icons.mjs        # ícones PNG (favicon)
+  deploy.sh                 # build + restart do PM2
 Dockerfile · docker-compose.yml · ecosystem.config.js
 infrastructure/             # (nginx etc.)
 ```
@@ -159,13 +137,10 @@ infrastructure/             # (nginx etc.)
 
    Abra <http://localhost:3000>.
 
-> O service worker é desabilitado em `development`. Para testar o PWA/offline
-> de verdade, use `npm run build && npm run start`.
+## Conectar ao Supabase
 
-## Conectar ao Supabase (ativar o sync real)
-
-Sem Supabase o app roda **só offline** (o chip de sync fica _Pendente_). Para a
-sincronização funcionar de verdade, siga os passos:
+Sem Supabase configurado o login fica bloqueado — o app depende do backend
+(Postgres + Auth) para tudo. Para funcionar, siga os passos:
 
 ### 1. Criar o projeto
 
@@ -188,11 +163,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 
 ### 3. Aplicar o schema
 
-As migrations estão em `supabase/migrations/` e devem rodar **nesta ordem**:
+As migrations estão em `supabase/migrations/` e devem rodar **nesta ordem**
+(13 arquivos, de `20260101000000` a `20260101001200`):
 
 1. `20260101000000_init_schema.sql` — tabelas, enums, índices, triggers.
 2. `20260101000100_rls.sql` — RLS, papéis e criação de perfil por usuário.
 3. `20260101000200_storage.sql` — buckets privados `documentos` e `assinaturas`.
+4. Demais migrações (`…0300` a `…1200`) — multitenant, atendimento, mapa de
+   assentos, ticketing/financeiro, pedidos e feed público.
 
 **Opção A — SQL Editor (sem instalar nada):** abra o **SQL Editor** do painel e
 cole o conteúdo de cada arquivo, rodando na ordem acima. Para dados de exemplo,
@@ -216,33 +194,29 @@ precisa clicar no link enviado por e-mail antes do primeiro login.)
 
 1. `npm run build && npm run start` (ou `npm run dev`).
 2. Acesse `/login` → aba **Criar conta** → cadastre o primeiro usuário
-   (**ele vira `admin`** automaticamente via trigger).
-3. Crie/edite pessoas e eventos. O chip no topo deve sair de **Pendente** para
-   **Sincronizado** em poucos segundos.
+   (**ele vira `super_admin`** automaticamente via trigger).
+3. Crie/edite pessoas e eventos — tudo é gravado direto no Supabase.
 4. Confirme os dados no painel do Supabase (**Table Editor**).
-5. Abra em outro navegador/dispositivo: ao logar, os registros são baixados
-   (pull).
+5. Abra em outro navegador/dispositivo: ao logar, os mesmos registros aparecem.
 
 > Captura de e-mail no plano gratuito é limitada; para produção, configure um
 > provedor de SMTP próprio em Authentication → Emails.
 
 ## Scripts
 
-| Comando                     | Descrição                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| `npm run dev`               | Servidor de desenvolvimento                                                       |
-| `npm run build`             | Build de produção (gera o service worker)                                         |
-| `npm run start`             | Serve o build de produção                                                         |
-| `npm run lint`              | ESLint                                                                            |
-| `npm run typecheck`         | TypeScript (`tsc --noEmit`)                                                       |
-| `npm run icons`             | Regenera os ícones do PWA em `public/icons`                                       |
-| `npm run db:verify`         | Smoke test das migrations do Dexie (Node + fake-indexeddb)                        |
-| `npm run sync:verify`       | Testa o sync engine offline (push, pull, conflito, deletes)                       |
-| `npm run pessoas:verify`    | Testa CPF, schema e o repositório de pessoas (offline)                            |
-| `npm run eventos:verify`    | Testa schema e o repositório de eventos/inscrições (offline)                      |
-| `npm run checkin:verify`    | Testa QR encode/decode e o fluxo check-in/check-out (offline)                     |
-| `npm run relatorios:verify` | Testa resumos, export CSV e gráfico de check-ins (offline)                        |
-| `npm run termos:verify`     | _(desabilitado)_ conflito de schema cache no fake-indexeddb; testado via check-in |
+| Comando                  | Descrição                                    |
+| ------------------------ | -------------------------------------------- |
+| `npm run dev`            | Servidor de desenvolvimento                  |
+| `npm run build`          | Build de produção                            |
+| `npm run start`          | Serve o build de produção                    |
+| `npm run lint`           | ESLint                                       |
+| `npm run typecheck`      | TypeScript (`tsc --noEmit`)                  |
+| `npm run icons`          | Regenera os ícones em `public/icons`         |
+| `npm run test`           | Testes unitários (Vitest)                    |
+| `npm run e2e`            | Smoke tests E2E (Playwright)                 |
+| `npm run deploy`         | Build + restart do PM2 + health check        |
+| `npm run format`         | Prettier (`--write`)                         |
+| `npm run bundle:analyze` | Analisa o bundle (`ANALYZE=true next build`) |
 
 ## Banco de dados
 
@@ -272,92 +246,25 @@ supabase db reset         # recria o banco local e roda supabase/seed.sql
 `supabase/seed.sql` cria **10 pessoas** (1 menor com responsável), **2 eventos**
 e inscrições de exemplo.
 
-> Modelo de permissões: `admin` (total), `staff` (cadastro + eventos),
-> `recepcao` (leitura + check-in/out). O RLS espelha isso no banco.
-
-### Local (Dexie / IndexedDB)
-
-`src/db/db.ts` define as migrations do banco local (`pers-eventos`), com os
-índices que sustentam o modo offline:
-
-- `[sync_status+updated_at]` — enfileira pendentes para envio.
-- `updated_at` — pull incremental.
-- `cpf`, `nome_completo`, `telefone`, `email` — busca local.
-- `sync_queue` e `sync_cursor` — fila de operações e cursor de sincronização.
-- `arquivos` — blobs (fotos/documentos) criados offline, enviados quando online.
-
-`src/db/seed.ts` popula dados fake (`seedLocalDatabase()` / `clearLocalDatabase()`)
-para testar sync e UI sem depender da rede.
-
-Valide o schema local a qualquer momento:
-
-```bash
-npm run db:verify
-```
-
-## Sync (offline-first)
-
-Fluxo (`src/sync/engine.ts` → `runSync`):
-
-1. **Push** — lê `sync_queue` (uma operação por registro, edições colapsadas),
-   envia na ordem de dependência de FK (`pessoas` → `eventos` → `menores` →
-   `documentos` → `termos` → `inscricoes`) e marca o registro como `synced` com
-   os dados devolvidos pelo servidor.
-2. **Pull** — por tabela, baixa tudo com `updated_at > cursor`, aplica e avança
-   `sync_cursor`. Atualizações em lote (`BATCH = 500`).
-
-Resolução de conflito (**last-write-wins**, com proteção local):
-
-- Registro com operação **pendente na fila nunca é sobrescrito** pelo remoto.
-- Se o remoto for mais novo, o registro é marcado como `conflict` (visual) mas o
-  valor local é preservado; o push seguinte faz o local vencer no servidor.
-- Sem pendência local, o remoto é aplicado normalmente.
-
-Status por registro (`sync_status`): `synced` · `pending` · `conflict` · `error`.
-
-Worker (`src/sync/worker.ts`, iniciado pelo `SyncProvider` na área autenticada):
-
-- Roda a cada 30s, ao reconectar (`online`) e ao voltar o foco da aba.
-- `syncNow()` é exportado para gatilhos manuais (ex.: botão "sincronizar").
-- Erros de rede abortam o ciclo sem perder a fila; erros permanentes (RLS,
-  validação) marcam o item como `error` com `ultimo_erro`.
-
-Limitação conhecida (v1): exclusões feitas em outro dispositivo não são
-propagadas por pull (sem tombstones no servidor). A exclusão local é enviada ao
-servidor normalmente.
-
-Teste o motor sem a rede:
-
-```bash
-npm run sync:verify
-```
+> Modelo de permissões: `tenant_admin` (total), `staff` (cadastro + eventos +
+> check-in), `cliente` (portal). O RLS espelha isso no banco.
 
 ## Módulo Pessoas (passo 4)
 
-CRUD totalmente offline na rota única `/pessoas` (sem rotas dinâmicas — assim o
-service worker precacheia o shell e o cadastro funciona sem rede).
+CRUD na rota `/pessoas`, com todos os dados vindos da API (`/api/pessoas`).
 
-- **Lista + busca** (`filtrarPessoas`) por nome, CPF ou telefone, direto do
-  IndexedDB (`useLiveQuery`).
+- **Lista + busca** (`filtrarPessoas`) por nome, CPF ou telefone.
 - **Formulário** (`pessoa-form.tsx`): React Hook Form + Zod. CPF/telefone
   validados e salvos só com dígitos; `consentimento_lgpd` obrigatório; visitante
   menor de 18 anos exige nome e CPF válido do responsável (linha em `menores`).
 - **Ficha** (`pessoa-detail.tsx`): Sheet com dados, saúde/emergência,
   responsável e histórico de eventos (inscrições + evento).
-- **Repositório** (`src/db/repos/pessoas.ts`): `savePessoa` preserva
-  `created_at`, grava com `sync_status: "pending"` e enfileira via `queue.ts`;
-  `deletePessoa` remove dependentes locais (menores, documentos, termos,
-  inscrições, arquivos) junto com a pessoa.
-
-Teste as regras de CPF, do schema e do repositório:
-
-```bash
-npm run pessoas:verify
-```
+- **API**: `GET/POST /api/pessoas`, `GET/PATCH/DELETE /api/pessoas/:id`
+  (o detalhe devolve `{ pessoa, menor, historico }`).
 
 ## Módulo Eventos + inscrições (passo 5)
 
-CRUD offline na rota única `/eventos` (mesma estratégia do módulo Pessoas).
+CRUD na rota `/eventos` (lista com contagem de inscritos por evento).
 
 - **Evento** (`evento-schema.ts` / `evento-form.tsx`): nome, descrição, início
   (obrigatório), término (≥ início), local, vagas (inteiro) e status
@@ -365,59 +272,46 @@ CRUD offline na rota única `/eventos` (mesma estratégia do módulo Pessoas).
 - **Inscrições** (dentro da ficha `evento-detail.tsx`): inscrever pessoas
   disponíveis (respeita a unicidade `evento_id + pessoa_id`), mudar o status
   (`inscrito → confirmado → checkin → checkout · cancelado`), valor/pagamento e
-  remover. Placeholders de `checkin`/`checkout` já existem — o fluxo por QR vem
-  no passo 6.
+  remover.
 - **Capacidade**: a lista e a ficha mostram `inscritos / vagas` e sinalizam
   **Lotado** quando atinge o limite.
-- **Repositório** (`src/db/repos/eventos.ts`): `saveEvento` preserva
-  `created_at` e enfileira; `deleteEvento` remove inscrições e termos
-  dependentes; `inscricoesPorEvento` alimenta as contagens da lista.
-
-```bash
-npm run eventos:verify
-```
+- **API**: `GET /api/eventos` (com `inscricoes(count)`), `GET/PATCH/DELETE
+/api/eventos/:id` (detalhe com `{ inscritos, disponiveis, vendas }`),
+  `POST /api/eventos/:id/inscricoes`, `PATCH/DELETE /api/inscricoes/:id`.
 
 ## Módulo Check-in por QR (passo 6)
 
-Tela de recepção em `/checkin` totalmente offline:
+Tela de recepção em `/checkin`, com validação online em tempo real:
 
-- **Leitor nativo** (`qr-scanner.tsx`): usa `BarcodeDetector` (Chromium) + `getUserMedia`; sem dependências externas. Funciona offline.
-- **Busca manual**: campo de texto aceita o payload do QR (`PERS1:<uuid>`), o UUID puro ou o nome do participante (busca em tempo real no IndexedDB).
+- **Leitor nativo** (`qr-scanner.tsx`): usa `BarcodeDetector` (Chromium) + `getUserMedia`; sem dependências externas.
+- **Busca manual**: campo de texto aceita o payload do QR (`PERS1:<uuid>`), o UUID puro ou o nome do participante (via `/api/inscricoes?busca=`).
 - **Filtro por evento**: opcional, restringe a busca manual.
 - **Ações**: ao selecionar uma inscrição, exibe cartão com dados da pessoa, evento, status atual e botões:
   - _Check-in_ (quando `inscrito`/`confirmado`/`cancelado`);
   - _Check-out_ (quando `checkin`);
   - _Nova entrada_ (quando `checkout` — gera novo horário de check-in).
+- **Ingressos**: o leitor também aceita `PERS2:<hash>` (`GET /api/tickets?hash=`)
+  e faz check-in via `POST /api/tickets/:id/checkin` (idempotente).
 - **Gerador de QR** (na parte inferior): cola o UUID da inscrição e gera o QR para impressão/teste.
 - **Reuso**: o QR também aparece no detalhe do evento (`evento-detail.tsx`) — botão de QR ao lado de cada inscrito.
 
-```bash
-npm run checkin:verify
-```
-
 ## Módulo Termos + LGPD (passo 7)
 
-Gestão de termos de responsabilidade e uso de imagem, com assinatura digital
-offline e log de acesso a dados (LGPD).
+Gestão de termos de responsabilidade e uso de imagem, com assinatura digital e
+log de acesso a dados (LGPD).
 
 - **Tipos de termo** (`termo-schema.ts`): `responsabilidade` e `imagem`, com
   textos pré-definidos.
-- **Assinatura offline** (`assinatura-canvas.tsx`): canvas HTML5 (touch/mouse),
-  exporta PNG base64; armazenado como blob no IndexedDB (`arquivos`).
+- **Assinatura** (`assinatura-canvas.tsx`): canvas HTML5 (touch/mouse), exporta
+  PNG; enviado a `POST /api/termos` e armazenado no bucket privado `assinaturas`
+  (path `termos/{id}.png`).
 - **Aceite** (`termo-aceite-sheet.tsx`): Sheet com texto rolável, canvas de
-  assinatura, checkbox de concordância; grava `termos` + `arquivos` + `log_acesso_dados`
-  (tudo `pending` para sync).
+  assinatura e checkbox de concordância; grava `termos` + `log_acesso_dados`.
 - **Integração check-in**: ao tentar fazer check-in, se a pessoa não aceitou o
   termo de responsabilidade do evento, abre o Sheet de aceite antes de prosseguir.
 - **Visualização** (`termos-view.tsx`): lista de termos aceitos por pessoa,
-  visualização/download da assinatura, log de acesso a dados (LGPD) com ação,
-  timestamp, user_id e pessoa_id.
-
-```bash
-npm run termos:verify
-```
-
-> **Nota:** este script está temporariamente desabilitado no `package.json` devido a uma limitação do `fake-indexeddb` (cache global de schema). A funcionalidade de termos é exercitada pelo teste de integração do check-in (`npm run checkin:verify`).
+  visualização/download da assinatura via signed URL, log de acesso a dados
+  (LGPD) com ação, timestamp, user_id e pessoa_id.
 
 ## Multitenant + Níveis de acesso
 
@@ -438,31 +332,29 @@ domínio (pessoas, eventos, inscrições, documentos, termos, logs) carregam
 - `tenant_id` é carimbado automaticamente por trigger (`set_tenant_id()`); o
   `super_admin` pode gravar em qualquer tenant. Trocar `papel` é bloqueado por
   trigger (`prevent_papel_change`) exceto para o super admin.
-- O cache local (Dexie/IndexedDB) é **limpo no logout** (`wipeLocalDatabase`) e o
-  tenant ativo é gravado por `setActiveTenantId` (`src/db/tenant.ts`) para evitar
-  vazamento de dados entre contas no mesmo dispositivo.
 - APIs: `/api/me`, `/api/health`, `/api/admin/estabelecimentos[/:id]`,
-  `/api/eventos[/:id]`, `/api/usuarios[/:id]`, `/api/portal/{perfil,eventos,inscricoes,termos}`,
-  `/api/checkout`, `/api/webhooks/payment`, `/api/tenant/ticket-types[/:id]`,
-  `/api/tenant/check-in/sync`, `/api/portal/{pedidos,eventos/:id}`.
+  `/api/pessoas[/:id]`, `/api/eventos[/:id]`, `/api/inscricoes[/:id]`,
+  `/api/tickets`, `/api/termos`, `/api/logs-acesso`, `/api/relatorios[/exportar]`,
+  `/api/usuarios[/:id]`, `/api/tenant/{ticket-types,espacos,pedidos,pessoas}`,
+  `/api/portal/{perfil,eventos,inscricoes,termos,pedidos,checkout,reservas,espacos}`,
+  `/api/checkout`, `/api/webhooks/payment`.
 
 ### Aplicar as migrations
 
-As migrations estão em `supabase/migrations/`
-(`20260101000300`…`20260101000800`). Aplique com a Supabase CLI
+As migrations estão em `supabase/migrations/`. Aplique com a Supabase CLI
 (`supabase db push`) ou colando os arquivos, em ordem, no **SQL Editor** do
-painel. Sem elas o app roda apenas offline (Dexie).
+painel.
 
 ## Módulo Financeiro + Ingressos (passo 12)
 
-Venda de ingressos com lotes, checkout do cliente e check-in offline na recepção:
+Venda de ingressos com lotes, checkout do cliente e check-in na recepção:
 
 - **Tabelas** (`20260101000700_ticketing_finance.sql`): `ticket_types` (lotes),
   `orders` (pedidos, `pending` → `paid`/`canceled`/`refunded`) e `tickets`
   (ingressos individuais com `qr_code_hash` único). RLS por tenant, como o resto.
 - **Admin**: no detalhe do evento há a seção **Lotes de ingressos** (criar,
-  editar, pausar, excluir; bloqueado excluir com vendas). Funciona offline:
-  grava no Dexie e sincroniza (`ticket_types` entra no push+pull).
+  editar, pausar, excluir; bloqueado excluir com vendas) via
+  `/api/tenant/ticket-types`.
 - **Cliente**: `/portal/eventos/:id` (checkout — lote, quantidade, Pix/cartão) e
   `/portal/ingressos` (carteira com QR Code `PERS2:<hash>` por ingresso).
 - **Pagamento**: `POST /api/webhooks/payment` (header `x-webhook-secret` com
@@ -470,11 +362,7 @@ Venda de ingressos com lotes, checkout do cliente e check-in offline na recepç�
   RPC `confirm_order_payment`, gerando um ingresso por unidade comprada.
   `payment_failed` cancela o pedido.
 - **Recepção**: o leitor aceita inscrições (`PERS1:<uuid>`) e ingressos
-  (`PERS2:<hash>`). O check-in do ingresso é validado no Dexie (offline) e a
-  fila `checkin_queue` é enviada a `POST /api/tenant/check-in/sync` quando há
-  conexão (idempotente; o pull nunca sobrescreve ingresso com check-in pendente).
-- `orders`/`tickets` são somente-leitura no dispositivo (chegam pelo pull); o
-  servidor é a fonte da verdade da venda.
+  (`PERS2:<hash>`), com check-in validado online e idempotente.
 
 ## Variáveis de ambiente
 
@@ -523,33 +411,9 @@ para **Production**, **Preview** e **Development**:
 > **Nota:** O Next.js lê automaticamente `.env.local` em desenvolvimento.
 > Copie `.env.example` para `.env.local` e preencha.
 
-### vercel.json
-
-O arquivo `vercel.json` na raiz configura:
-
-- Headers de segurança (CSP básico, X-Frame-Options, etc.)
-- Cache estático para manifest e ícones PWA
-- Tempo máximo de execução das API Routes (30s)
-
 ### Variáveis de build
 
 O build usa `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (ou `PUBLISHABLE_KEY`) em tempo de compilação para injetar no bundle client-side. Certifique-se de que estão definidas nos ambientes de Preview/Production da Vercel.
-
-## Como testar offline
-
-1. Faça `npm run build && npm run start` e abra o app.
-2. Aguarde a primeira carga (o service worker precacheia o shell).
-3. Abra o **DevTools → Application → Service Workers** e confirme que está
-   `activated`.
-4. Vá em **DevTools → Network → selecione "Offline"**.
-5. Navegue entre as páginas: o shell e as rotas cacheadas continuam
-   funcionando; o banner **"Sem conexão"** aparece no topo. Uma rota sem cache
-   cai no fallback `/offline`.
-6. Desmarque "Offline": aparece um toast **"Conectado de novo"**.
-
-> A flag `reloadOnOnline` do PWA recarrega a página quando a conexão volta,
-> garantindo que a próxima navegação passe pelo `middleware` e renove a sessão
-> do Supabase.
 
 ## Convenções
 

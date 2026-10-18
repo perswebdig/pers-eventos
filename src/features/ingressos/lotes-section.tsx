@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useCallback, useEffect, useState } from "react";
 import { Pause, Pencil, Play, Plus, Ticket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,15 +17,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  loteDisponivel,
-  listLotesByEvento,
-  removeLote,
-  saveLote,
-  toggleLoteAtivo,
-} from "@/db/repos/lotes";
 import { formatCurrency } from "@/lib/format";
 import { loteFormSchema } from "./lote-schema";
+import type { TicketType } from "@/types/database";
 
 interface FormState {
   id: string | null;
@@ -37,14 +30,33 @@ interface FormState {
 
 const FORM_VAZIO: FormState = { id: null, name: "", price: "", quantity_total: "" };
 
+function loteDisponivel(lote: TicketType): number {
+  return Math.max(0, lote.quantity_total - lote.quantity_sold);
+}
+
 // Seção "Lotes de ingressos" do detalhe do evento (Admin do Estabelecimento).
-// Funciona offline: grava no Dexie e sincroniza quando houver conexão.
 export function LotesSection({ eventoId }: { eventoId: string }) {
-  const lotes = useLiveQuery(() => listLotesByEvento(eventoId), [eventoId]);
+  const [lotes, setLotes] = useState<TicketType[] | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [removerId, setRemoverId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tenant/ticket-types?event_id=${eventoId}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+      setLotes((body as { data: TicketType[] }).data ?? []);
+    } catch (err) {
+      setLotes([]);
+      toast.error("Não foi possível carregar os lotes", { description: (err as Error).message });
+    }
+  }, [eventoId]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   async function handleSalvar() {
     if (!form) return;
@@ -67,17 +79,27 @@ export function LotesSection({ eventoId }: { eventoId: string }) {
     const existente = form.id ? lotes?.find((l) => l.id === form.id) : undefined;
     setSalvando(true);
     try {
-      await saveLote({
-        id: form.id ?? undefined,
-        event_id: eventoId,
-        name: parsed.data.name,
-        price: parsed.data.price,
-        quantity_total: parsed.data.quantity_total,
-        is_active: existente?.is_active ?? true,
-      });
+      const res = await fetch(
+        form.id ? `/api/tenant/ticket-types/${form.id}` : "/api/tenant/ticket-types",
+        {
+          method: form.id ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(form.id ? {} : { event_id: eventoId }),
+            name: parsed.data.name,
+            price: parsed.data.price,
+            quantity_total: parsed.data.quantity_total,
+            is_active: existente?.is_active ?? true,
+          }),
+        },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao salvar");
+
       toast.success(form.id ? "Lote atualizado" : "Lote criado");
       setForm(null);
       setErros({});
+      await carregar();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível salvar o lote");
     } finally {
@@ -87,8 +109,15 @@ export function LotesSection({ eventoId }: { eventoId: string }) {
 
   async function handleToggle(id: string, ativo: boolean) {
     try {
-      await toggleLoteAtivo(id, ativo);
+      const res = await fetch(`/api/tenant/ticket-types/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: ativo }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao atualizar");
       toast.success(ativo ? "Lote reativado" : "Lote pausado");
+      await carregar();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível atualizar o lote");
     }
@@ -97,8 +126,11 @@ export function LotesSection({ eventoId }: { eventoId: string }) {
   async function handleRemove() {
     if (!removerId) return;
     try {
-      await removeLote(removerId);
+      const res = await fetch(`/api/tenant/ticket-types/${removerId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao excluir");
       toast.success("Lote excluído");
+      await carregar();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível excluir o lote");
     } finally {
@@ -176,7 +208,7 @@ export function LotesSection({ eventoId }: { eventoId: string }) {
         </div>
       ) : null}
 
-      {lotes === undefined ? (
+      {lotes === null ? (
         <p className="text-sm text-muted-foreground">Carregando lotes…</p>
       ) : lotes.length === 0 && !form ? (
         <p className="text-sm text-muted-foreground">

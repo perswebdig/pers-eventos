@@ -29,8 +29,7 @@ export const ADMIN_NAV_ITEMS: readonly NavItem[] = [
 
 // Navegação do portal do cliente.
 export const PORTAL_NAV_ITEMS: readonly NavItem[] = [
-  { href: "/portal", label: "Meu espaço", roles: ["cliente"] },
-  { href: "/portal/eventos", label: "Eventos", roles: ["cliente"] },
+  { href: "/portal", label: "Início", roles: ["cliente"] },
   { href: "/portal/ingressos", label: "Meus Ingressos", roles: ["cliente"] },
   { href: "/portal/qr", label: "Meu QR Code", roles: ["cliente"] },
   { href: "/portal/termos", label: "Termos", roles: ["cliente"] },

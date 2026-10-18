@@ -1,4 +1,4 @@
-import { requireEstabelecimento } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/session";
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
 import { PortalIngressos } from "@/features/portal/portal-ingressos";
@@ -6,7 +6,7 @@ import { PortalIngressos } from "@/features/portal/portal-ingressos";
 export const metadata = { title: "Meus Ingressos" };
 
 export default async function PortalIngressosPage() {
-  await requireEstabelecimento();
+  await requireRole(["cliente"]);
 
   return (
     <PageContainer width="content">

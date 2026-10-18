@@ -1,6 +1,6 @@
 "use client";
 
-import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2, User } from "lucide-react";
 import {
   Sheet,
@@ -14,9 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SyncStatusBadge } from "@/components/sync-status-badge";
-import { getPessoaDetalhe } from "@/db/repos/pessoas";
 import { calcularIdade, formatCpf, formatDate, formatTelefone } from "@/lib/format";
+import type { Evento, Inscricao, Menor, Pessoa } from "@/types/database";
+
+interface PessoaDetalhe {
+  pessoa: Pessoa;
+  menor: Menor | null;
+  historico: Array<{
+    inscricao: Inscricao;
+    evento: Pick<Evento, "id" | "nome" | "data_inicio"> | null;
+  }>;
+}
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -48,15 +56,45 @@ export function PessoaDetailSheet({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const detalhe = useLiveQuery(
-    () => (pessoaId ? getPessoaDetalhe(pessoaId) : Promise.resolve(null)),
-    [pessoaId],
-  );
+  const [detalhe, setDetalhe] = useState<PessoaDetalhe | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !pessoaId) {
+      setDetalhe(null);
+      setErro(null);
+      return;
+    }
+
+    let ativo = true;
+    setDetalhe(null);
+    setErro(null);
+    fetch(`/api/pessoas/${pessoaId}`)
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+        return (body as { data: PessoaDetalhe }).data;
+      })
+      .then((data) => {
+        if (ativo) setDetalhe(data);
+      })
+      .catch((err: Error) => {
+        if (ativo) setErro(err.message);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [open, pessoaId]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-        {!detalhe ? (
+        {erro ? (
+          <div className="space-y-2 p-4">
+            <p className="text-sm font-medium">Não foi possível carregar</p>
+            <p className="text-sm text-muted-foreground">{erro}</p>
+          </div>
+        ) : !detalhe ? (
           <div className="space-y-3 p-4">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-24 w-full" />
@@ -71,8 +109,10 @@ export function PessoaDetailSheet({
                 </div>
                 <div className="min-w-0">
                   <SheetTitle className="truncate">{detalhe.pessoa.nome_completo}</SheetTitle>
-                  <SheetDescription className="flex items-center gap-2">
-                    <SyncStatusBadge status={detalhe.pessoa.sync_status} />
+                  <SheetDescription>
+                    {detalhe.historico.length > 0
+                      ? `${detalhe.historico.length} inscrição(ões)`
+                      : "Sem inscrições"}
                   </SheetDescription>
                 </div>
               </div>

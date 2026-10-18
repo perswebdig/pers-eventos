@@ -9,7 +9,7 @@ export default function RelatoriosPage() {
     <PageContainer width="app">
       <PageHeader
         title="Relatórios"
-        description="Visão geral e exportação dos dados offline. Todos os números vêm do IndexedDB local."
+        description="Visão geral e exportação dos dados do estabelecimento."
       />
       <RelatoriosDashboard />
     </PageContainer>

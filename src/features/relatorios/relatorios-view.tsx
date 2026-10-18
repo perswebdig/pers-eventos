@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   CalendarDays,
@@ -29,26 +28,49 @@ import { LoadingSkeleton } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge, type StatusTone } from "@/components/status-badge";
 import { Donut } from "@/components/charts";
-import {
-  getPessoasResumo,
-  getEventosResumo,
-  getInscricoesResumo,
-  getTermosResumo,
-  getLogsAcessoResumo,
-  getCheckinsPorDia,
-  exportarPessoasCSV,
-  exportarEventosCSV,
-  exportarInscricoesCSV,
-  exportarTermosCSV,
-  exportarLogsAcessoCSV,
-} from "@/db/repos/relatorios";
 import { formatDate } from "@/lib/format";
 
-function syncTone(status: string): StatusTone {
-  if (status === "synced") return "success";
-  if (status === "pending") return "warning";
-  if (status === "conflict" || status === "error") return "danger";
-  return "neutral";
+interface PessoasResumo {
+  total: number;
+  comCpf: number;
+  menores: number;
+  adultos: number;
+  consentimentoLgpd: number;
+}
+
+interface EventosResumo {
+  total: number;
+  porStatus: Record<string, number>;
+  capacidadeTotal: number;
+  vagasPreenchidas: number;
+}
+
+interface InscricoesResumo {
+  total: number;
+  porStatus: Record<string, number>;
+  porPagamento: Record<string, number>;
+  checkinsRealizados: number;
+  checkoutsRealizados: number;
+}
+
+interface TermosResumo {
+  total: number;
+  porTipo: Record<string, number>;
+}
+
+interface LogsResumo {
+  total: number;
+  porAcao: Record<string, number>;
+  ultimosDias: Array<{ data: string; count: number }>;
+}
+
+interface ResumoRelatorios {
+  pessoas: PessoasResumo;
+  eventos: EventosResumo;
+  inscricoes: InscricoesResumo;
+  termos: TermosResumo;
+  logs: LogsResumo;
+  checkinsPorDia: Array<{ data: string; checkins: number; checkouts: number }>;
 }
 
 function eventoStatusTone(status: string): StatusTone {
@@ -89,23 +111,15 @@ function CountPill({
   );
 }
 
-function ExportButton({
-  onClick,
-  disabled,
-  label = "Exportar CSV",
-}: {
-  onClick: () => Promise<void>;
-  disabled?: boolean;
-  label?: string;
-}) {
+function ExportButton({ onClick, disabled }: { onClick: () => Promise<void>; disabled?: boolean }) {
   return (
     <Button variant="outline" size="sm" onClick={onClick} disabled={disabled}>
-      <Download className="size-4" /> {label}
+      <Download className="size-4" /> Exportar CSV
     </Button>
   );
 }
 
-function PessoaResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getPessoasResumo>> }) {
+function PessoaResumoTab({ resumo }: { resumo: PessoasResumo }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -132,17 +146,11 @@ function PessoaResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getPess
           tone="success"
         />
       </div>
-      <Separator />
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <CountPill key={status} label={status} count={count} tone={syncTone(status)} />
-        ))}
-      </div>
     </div>
   );
 }
 
-function EventoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getEventosResumo>> }) {
+function EventoResumoTab({ resumo }: { resumo: EventosResumo }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -184,20 +192,11 @@ function EventoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getEven
           <CountPill key={status} label={status} count={count} tone={eventoStatusTone(status)} />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <CountPill key={status} label={status} count={count} tone={syncTone(status)} />
-        ))}
-      </div>
     </div>
   );
 }
 
-function InscricaoResumoTab({
-  resumo,
-}: {
-  resumo: Awaited<ReturnType<typeof getInscricoesResumo>>;
-}) {
+function InscricaoResumoTab({ resumo }: { resumo: InscricoesResumo }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -246,21 +245,16 @@ function InscricaoResumoTab({
           <CountPill key={status} label={status} count={count} tone={inscricaoStatusTone(status)} />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {Object.entries(resumo.porPagamento).map(([status, count]) => (
           <CountPill key={status} label={status} count={count} tone={pagamentoTone(status)} />
-        ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <CountPill key={status} label={status} count={count} tone={syncTone(status)} />
         ))}
       </div>
     </div>
   );
 }
 
-function TermoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getTermosResumo>> }) {
+function TermoResumoTab({ resumo }: { resumo: TermosResumo }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -280,21 +274,11 @@ function TermoResumoTab({ resumo }: { resumo: Awaited<ReturnType<typeof getTermo
           tone="info"
         />
       </div>
-      <Separator />
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(resumo.porStatusSync).map(([status, count]) => (
-          <CountPill key={status} label={status} count={count} tone={syncTone(status)} />
-        ))}
-      </div>
     </div>
   );
 }
 
-function LogAcessoResumoTab({
-  resumo,
-}: {
-  resumo: Awaited<ReturnType<typeof getLogsAcessoResumo>>;
-}) {
+function LogAcessoResumoTab({ resumo }: { resumo: LogsResumo }) {
   return (
     <div className="space-y-4">
       <StatCard
@@ -339,11 +323,11 @@ function LogAcessoResumoTab({
 
 function GraficosTab({
   inscricoesResumo,
+  checkinsPorDia,
 }: {
-  inscricoesResumo: Awaited<ReturnType<typeof getInscricoesResumo>> | undefined;
+  inscricoesResumo: InscricoesResumo | null;
+  checkinsPorDia: Array<{ data: string; checkins: number; checkouts: number }> | null;
 }) {
-  const dados = useLiveQuery(() => getCheckinsPorDia(30), []);
-
   const segmentos = useMemo(() => {
     if (!inscricoesResumo) return [];
     const porStatus = inscricoesResumo.porStatus;
@@ -372,14 +356,14 @@ function GraficosTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {dados === undefined ? (
+          {checkinsPorDia === null ? (
             <LoadingSkeleton count={1} />
-          ) : dados.length === 0 || dados.every((d) => d.checkins === 0 && d.checkouts === 0) ? (
+          ) : checkinsPorDia.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               Nenhum check-in ou check-out nos últimos 30 dias.
             </p>
           ) : (
-            <CheckinsChart dados={dados} />
+            <CheckinsChart dados={checkinsPorDia} />
           )}
         </CardContent>
       </Card>
@@ -389,7 +373,7 @@ function GraficosTab({
           <CardTitle className="text-base">Inscrições por status</CardTitle>
         </CardHeader>
         <CardContent>
-          {inscricoesResumo === undefined ? (
+          {inscricoesResumo === null ? (
             <Skeleton className="h-40 w-full" />
           ) : segmentos.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
@@ -458,17 +442,38 @@ function CheckinsChart({
 }
 
 export function RelatoriosDashboard() {
-  const pessoasResumo = useLiveQuery(() => getPessoasResumo(), []);
-  const eventosResumo = useLiveQuery(() => getEventosResumo(), []);
-  const inscricoesResumo = useLiveQuery(() => getInscricoesResumo(), []);
-  const termosResumo = useLiveQuery(() => getTermosResumo(), []);
-  const logsResumo = useLiveQuery(() => getLogsAcessoResumo(), []);
+  const [resumo, setResumo] = useState<ResumoRelatorios | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
 
-  async function handleExport(fn: () => Promise<string>, filename: string) {
+  useEffect(() => {
+    let ativo = true;
+    fetch("/api/relatorios")
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao carregar");
+        return (body as { data: ResumoRelatorios }).data;
+      })
+      .then((data) => {
+        if (ativo) setResumo(data);
+      })
+      .catch((err: Error) => {
+        if (ativo) setErro(err.message);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  async function handleExport(tipo: string) {
     setExportando(true);
     try {
-      const csv = await fn();
+      const res = await fetch(`/api/relatorios/exportar?tipo=${tipo}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Falha ao exportar");
+      }
+      const csv = await res.text();
       if (!csv) {
         toast.info("Nenhum dado para exportar");
         return;
@@ -477,15 +482,26 @@ export function RelatoriosDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = `${tipo}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`${filename} baixado`);
-    } catch {
-      toast.error("Falha ao exportar");
+      toast.success(`${tipo}.csv baixado`);
+    } catch (err) {
+      toast.error("Falha ao exportar", { description: (err as Error).message });
     } finally {
       setExportando(false);
     }
+  }
+
+  if (erro) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-sm font-medium">Não foi possível carregar os relatórios</p>
+          <p className="text-sm text-muted-foreground">{erro}</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -512,86 +528,70 @@ export function RelatoriosDashboard() {
       </TabsList>
 
       <TabsContent value="pessoas" className="space-y-4">
-        {pessoasResumo === undefined ? (
+        {resumo === null ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <PessoaResumoTab resumo={pessoasResumo as Awaited<ReturnType<typeof getPessoasResumo>>} />
+          <PessoaResumoTab resumo={resumo.pessoas} />
         )}
         <Separator />
         <div className="flex justify-end">
-          <ExportButton
-            onClick={() => handleExport(exportarPessoasCSV, "pessoas.csv")}
-            disabled={exportando}
-          />
+          <ExportButton onClick={() => handleExport("pessoas")} disabled={exportando} />
         </div>
       </TabsContent>
 
       <TabsContent value="eventos" className="space-y-4">
-        {eventosResumo === undefined ? (
+        {resumo === null ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <EventoResumoTab resumo={eventosResumo as Awaited<ReturnType<typeof getEventosResumo>>} />
+          <EventoResumoTab resumo={resumo.eventos} />
         )}
         <Separator />
         <div className="flex justify-end">
-          <ExportButton
-            onClick={() => handleExport(exportarEventosCSV, "eventos.csv")}
-            disabled={exportando}
-          />
+          <ExportButton onClick={() => handleExport("eventos")} disabled={exportando} />
         </div>
       </TabsContent>
 
       <TabsContent value="inscricoes" className="space-y-4">
-        {inscricoesResumo === undefined ? (
+        {resumo === null ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <InscricaoResumoTab
-            resumo={inscricoesResumo as Awaited<ReturnType<typeof getInscricoesResumo>>}
-          />
+          <InscricaoResumoTab resumo={resumo.inscricoes} />
         )}
         <Separator />
         <div className="flex justify-end">
-          <ExportButton
-            onClick={() => handleExport(exportarInscricoesCSV, "inscricoes.csv")}
-            disabled={exportando}
-          />
+          <ExportButton onClick={() => handleExport("inscricoes")} disabled={exportando} />
         </div>
       </TabsContent>
 
       <TabsContent value="termos" className="space-y-4">
-        {termosResumo === undefined ? (
+        {resumo === null ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <TermoResumoTab resumo={termosResumo as Awaited<ReturnType<typeof getTermosResumo>>} />
+          <TermoResumoTab resumo={resumo.termos} />
         )}
         <Separator />
         <div className="flex justify-end">
-          <ExportButton
-            onClick={() => handleExport(exportarTermosCSV, "termos.csv")}
-            disabled={exportando}
-          />
+          <ExportButton onClick={() => handleExport("termos")} disabled={exportando} />
         </div>
       </TabsContent>
 
       <TabsContent value="logs" className="space-y-4">
-        {logsResumo === undefined ? (
+        {resumo === null ? (
           <Skeleton className="h-64 w-full" />
         ) : (
-          <LogAcessoResumoTab
-            resumo={logsResumo as Awaited<ReturnType<typeof getLogsAcessoResumo>>}
-          />
+          <LogAcessoResumoTab resumo={resumo.logs} />
         )}
         <Separator />
         <div className="flex justify-end">
-          <ExportButton
-            onClick={() => handleExport(exportarLogsAcessoCSV, "logs-acesso.csv")}
-            disabled={exportando}
-          />
+          <ExportButton onClick={() => handleExport("logs")} disabled={exportando} />
         </div>
       </TabsContent>
 
       <TabsContent value="grafico">
-        <GraficosTab inscricoesResumo={inscricoesResumo} />
+        <GraficosTab
+          inscricoesResumo={resumo?.inscricoes ?? null}
+          checkinsPorDia={resumo?.checkinsPorDia ?? null}
+        />
       </TabsContent>
     </Tabs>
   );

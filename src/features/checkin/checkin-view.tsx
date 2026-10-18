@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ScanLine, CheckCircle2, LogOut, RotateCcw, X, Circle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -20,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, type StatusTone } from "@/components/status-badge";
-import { EmptyState, LoadingSkeleton } from "@/components/empty-state";
+import { EmptyState } from "@/components/empty-state";
 import {
   ScanFeedback,
   playScanBeep,
@@ -28,29 +27,13 @@ import {
   type ScanFeedbackData,
   type ScanFeedbackKind,
 } from "./scan-feedback";
-import {
-  listEventos,
-  getInscricaoDetalhe,
-  fazerCheckin,
-  fazerCheckout,
-  buscarInscricoes,
-} from "@/db/repos/eventos";
-import type { InscricaoDetalhe } from "@/db/repos/eventos";
-import {
-  contagemCheckinsPendentes,
-  fazerCheckinTicket,
-  getTicketByHash,
-  getTicketDetalhe,
-} from "@/db/repos/ingressos";
-import type { TicketDetalhe } from "@/db/repos/ingressos";
-import type { EventoLocal } from "@/db/types";
-import { formatDate, formatDateTime } from "@/lib/format";
 import { QrScanner, isQrScanSupported } from "./qr-scanner";
-import { parseInscricaoQr, encodeInscricaoQr, parseIngressoQr } from "./qr";
+import { parseInscricaoQr, parseIngressoQr } from "./qr";
 import { TicketActionCard } from "./ticket-card";
-import { QRCodeSVG } from "qrcode.react";
+import type { InscricaoDetalhe, TicketDetalhe } from "./tipos";
 import { TermoAceiteSheet } from "@/features/termos/termo-aceite-sheet";
-import { jaAceitouTermo } from "@/db/repos/termos";
+import type { Evento, Inscricao } from "@/types/database";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "cn";
 
 const QRGeneratorLazy = dynamic(() => import("./qr-generator").then((m) => m.QRGenerator), {
@@ -76,14 +59,17 @@ const STATUS_TONE: Record<string, StatusTone> = {
 
 function ActionCard({
   det,
+  ocupado,
   onClose,
   onCheckin,
+  onCheckout,
 }: {
-  det: InscricaoDetalhe | null;
+  det: InscricaoDetalhe;
+  ocupado: boolean;
   onClose: () => void;
-  onCheckin: (inscricaoId: string, eventoId: string, pessoaId: string, pessoaNome: string) => void;
+  onCheckin: () => void;
+  onCheckout: () => void;
 }) {
-  if (!det) return null;
   const { inscricao, pessoa, evento } = det;
   const st = inscricao.status;
   const tone = STATUS_TONE[st] ?? "neutral";
@@ -100,11 +86,12 @@ function ActionCard({
         size="icon"
         className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
         onClick={onClose}
+        aria-label="Fechar"
       >
         <X className="size-4" />
       </Button>
       <div className="grid gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pr-8">
           <h3 className="text-lg font-semibold">{pessoa?.nome_completo ?? "—"}</h3>
           <StatusBadge tone={tone}>{STATUS_LABEL[st] ?? st}</StatusBadge>
         </div>
@@ -121,31 +108,15 @@ function ActionCard({
         </div>
         <Separator />
         {st === "checkin" ? (
-          <Button
-            className="w-full"
-            onClick={async () => {
-              const r = await fazerCheckout(inscricao.id);
-              if (r) {
-                toast.success("Check-out realizado");
-              } else {
-                toast.error("Falha ao registrar check-out");
-              }
-            }}
-          >
+          <Button className="w-full" onClick={onCheckout} disabled={ocupado}>
             <LogOut className="size-4" /> Check-out
           </Button>
         ) : st === "checkout" ? (
           <Button
             size="lg"
             className="w-full bg-success text-success-foreground hover:bg-success/90"
-            onClick={() =>
-              onCheckin(
-                inscricao.id,
-                inscricao.evento_id,
-                inscricao.pessoa_id,
-                pessoa?.nome_completo ?? "",
-              )
-            }
+            onClick={onCheckin}
+            disabled={ocupado}
           >
             <RotateCcw className="size-4" /> Nova entrada
           </Button>
@@ -153,14 +124,8 @@ function ActionCard({
           <Button
             size="lg"
             className="w-full bg-success text-success-foreground hover:bg-success/90"
-            onClick={() =>
-              onCheckin(
-                inscricao.id,
-                inscricao.evento_id,
-                inscricao.pessoa_id,
-                pessoa?.nome_completo ?? "",
-              )
-            }
+            onClick={onCheckin}
+            disabled={ocupado}
           >
             <CheckCircle2 className="size-4" /> Check-in
           </Button>
@@ -168,6 +133,36 @@ function ActionCard({
       </div>
     </Card>
   );
+}
+
+async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro na requisição");
+  return (body as { data: T }).data;
+}
+
+async function buscarInscricaoDetalhe(id: string): Promise<InscricaoDetalhe | null> {
+  const res = await fetch(`/api/inscricoes/${id}`);
+  if (res.status === 404) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao buscar inscrição");
+  return (body as { data: InscricaoDetalhe }).data;
+}
+
+async function buscarTicketPorHash(hash: string): Promise<TicketDetalhe | null> {
+  const res = await fetch(`/api/tickets?hash=${hash}`);
+  if (res.status === 404) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao buscar ingresso");
+  return (body as { data: TicketDetalhe }).data;
+}
+
+async function jaAceitouTermo(pessoaId: string, eventoId: string | null): Promise<boolean> {
+  const qs = new URLSearchParams({ pessoa_id: pessoaId, tipo: "responsabilidade" });
+  if (eventoId) qs.set("evento_id", eventoId);
+  const data = await apiJson<{ id: string }[]>(`/api/termos?${qs.toString()}`);
+  return data.length > 0;
 }
 
 export function CheckinView() {
@@ -179,6 +174,8 @@ export function CheckinView() {
   const [eventoFiltro, setEventoFiltro] = useState<string | null>(null);
   const [erroScanner, setErroScanner] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ScanFeedbackData | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [termoSheet, setTermoSheet] = useState<{
     open: boolean;
     inscricaoId: string;
@@ -187,9 +184,21 @@ export function CheckinView() {
     pessoaNome: string;
   } | null>(null);
 
-  const eventos = useLiveQuery(() => listEventos(), []);
-  const checkinsPendentes = useLiveQuery(() => contagemCheckinsPendentes(), []);
   const suporteScanner = isQrScanSupported();
+
+  useEffect(() => {
+    let ativo = true;
+    apiJson<Evento[]>("/api/eventos")
+      .then((data) => {
+        if (ativo) setEventos(data);
+      })
+      .catch(() => {
+        if (ativo) setEventos([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (selecionada || ticketSelecionado) setScannerAtivo(false);
@@ -201,75 +210,128 @@ export function CheckinView() {
     vibrateScan(kind);
   }
 
-  async function fazerCheckinComTermo(
-    inscricaoId: string,
-    eventoId: string,
-    pessoaId: string,
-    pessoaNome: string,
-  ) {
-    // Verifica se já aceitou o termo de responsabilidade para este evento
-    const aceitou = await jaAceitouTermo(pessoaId, "responsabilidade", eventoId);
-    if (!aceitou) {
-      setTermoSheet({ open: true, inscricaoId, eventoId, pessoaId, pessoaNome });
-      return;
+  const recarregarSelecionada = useCallback(async (inscricaoId: string) => {
+    try {
+      const det = await buscarInscricaoDetalhe(inscricaoId);
+      if (det) setSelecionada(det);
+    } catch {
+      // mantém o cartão atual se o recarregamento falhar
     }
-    const r = await fazerCheckin(inscricaoId);
-    if (r) emitir("ok", "ENTRADA LIBERADA", pessoaNome || undefined);
-    else emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
+  }, []);
+
+  async function fazerCheckinInscricao(inscricaoId: string, pessoaNome: string) {
+    setOcupado(true);
+    try {
+      await apiJson<Inscricao>(`/api/inscricoes/${inscricaoId}/checkin`, { method: "POST" });
+      emitir("ok", "ENTRADA LIBERADA", pessoaNome || undefined);
+      await recarregarSelecionada(inscricaoId);
+    } catch {
+      emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function fazerCheckinComTermo(inscricao: Inscricao, pessoaNome: string) {
+    try {
+      const aceitou = await jaAceitouTermo(inscricao.pessoa_id, inscricao.evento_id);
+      if (!aceitou) {
+        setTermoSheet({
+          open: true,
+          inscricaoId: inscricao.id,
+          eventoId: inscricao.evento_id,
+          pessoaId: inscricao.pessoa_id,
+          pessoaNome,
+        });
+        return;
+      }
+      await fazerCheckinInscricao(inscricao.id, pessoaNome);
+    } catch (err) {
+      toast.error("Não foi possível verificar o termo", {
+        description: (err as Error).message,
+      });
+    }
+  }
+
+  async function fazerCheckoutInscricao(inscricaoId: string) {
+    setOcupado(true);
+    try {
+      await apiJson<Inscricao>(`/api/inscricoes/${inscricaoId}/checkout`, { method: "POST" });
+      toast.success("Check-out realizado");
+      await recarregarSelecionada(inscricaoId);
+    } catch (err) {
+      toast.error("Falha ao registrar check-out", { description: (err as Error).message });
+    } finally {
+      setOcupado(false);
+    }
   }
 
   async function handleCheckinTicket(ticketId: string) {
-    const r = await fazerCheckinTicket(ticketId);
-    if (!r) {
+    setOcupado(true);
+    try {
+      const ticket = await apiJson<TicketDetalhe["ticket"]>(`/api/tickets/${ticketId}/checkin`, {
+        method: "POST",
+      });
+      const nome = ticketSelecionado?.pessoa?.nome_completo ?? undefined;
+      setTicketSelecionado((prev) => (prev ? { ...prev, ticket } : prev));
+      emitir("ok", "ENTRADA LIBERADA", nome);
+    } catch {
       emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
-      return;
+    } finally {
+      setOcupado(false);
     }
-    const det = await getTicketDetalhe(r);
-    setTicketSelecionado(det);
-    emitir("ok", "ENTRADA LIBERADA", det?.pessoa?.nome_completo ?? undefined);
   }
 
-  async function resolverTexto(texto: string) {
-    // QR de ingresso (PERS2:<hash>) tem prioridade.
-    const hash = parseIngressoQr(texto);
-    if (hash) {
-      const ticket = await getTicketByHash(hash);
-      if (!ticket) {
-        emitir("error", "NÃO ENCONTRADO", "Ingresso ainda não sincronizado neste dispositivo.");
-        return;
-      }
-      const det = await getTicketDetalhe(ticket);
-      setTicketSelecionado(det);
-      setSelecionada(null);
-      setBusca("");
-      setResultados([]);
-      if (det.ticket.is_checked_in) {
-        emitir("warn", "JÁ UTILIZADO", det.pessoa?.nome_completo ?? undefined);
-      }
-      return;
-    }
-    const id = parseInscricaoQr(texto);
-    if (id) {
-      const det = await getInscricaoDetalhe(id);
-      if (!det) {
-        emitir("error", "NÃO ENCONTRADO", "Inscrição ainda não sincronizada neste dispositivo.");
-        return;
-      }
-      setSelecionada(det);
-      setTicketSelecionado(null);
-      setBusca("");
-      setResultados([]);
-      if (det.inscricao.status === "checkin") {
-        emitir("warn", "JÁ ESTÁ PRESENTE", det.pessoa?.nome_completo ?? undefined);
-      }
-      return;
-    }
-    // busca por nome
-    const res = await buscarInscricoes(texto, eventoFiltro || undefined);
+  async function buscarPorNome(termo: string) {
+    const qs = new URLSearchParams({ busca: termo });
+    if (eventoFiltro) qs.set("evento", eventoFiltro);
+    const res = await apiJson<InscricaoDetalhe[]>(`/api/inscricoes?${qs.toString()}`);
     if (res.length === 0) {
       toast.info("Nenhuma inscrição encontrada.");
     }
     setResultados(res);
+  }
+
+  async function resolverTexto(texto: string) {
+    try {
+      const hash = parseIngressoQr(texto);
+      if (hash) {
+        const det = await buscarTicketPorHash(hash);
+        if (!det) {
+          emitir("error", "NÃO ENCONTRADO", "Nenhum ingresso com este QR code.");
+          return;
+        }
+        setTicketSelecionado(det);
+        setSelecionada(null);
+        setBusca("");
+        setResultados([]);
+        if (det.ticket.is_checked_in) {
+          emitir("warn", "JÁ UTILIZADO", det.pessoa?.nome_completo ?? undefined);
+        }
+        return;
+      }
+
+      const id = parseInscricaoQr(texto);
+      if (id) {
+        const det = await buscarInscricaoDetalhe(id);
+        if (!det) {
+          emitir("error", "NÃO ENCONTRADO", "Inscrição não encontrada.");
+          return;
+        }
+        setSelecionada(det);
+        setTicketSelecionado(null);
+        setBusca("");
+        setResultados([]);
+        if (det.inscricao.status === "checkin") {
+          emitir("warn", "JÁ ESTÁ PRESENTE", det.pessoa?.nome_completo ?? undefined);
+        }
+        return;
+      }
+
+      await buscarPorNome(texto);
+    } catch (err) {
+      emitir("error", "FALHA NA BUSCA", (err as Error).message);
+    }
   }
 
   async function handleScan(raw: string) {
@@ -282,11 +344,15 @@ export function CheckinView() {
   }
 
   async function selecionarDaLista(inscId: string) {
-    const det = await getInscricaoDetalhe(inscId);
-    if (det) {
-      setSelecionada(det);
-      setResultados([]);
-      setBusca("");
+    try {
+      const det = await buscarInscricaoDetalhe(inscId);
+      if (det) {
+        setSelecionada(det);
+        setResultados([]);
+        setBusca("");
+      }
+    } catch (err) {
+      toast.error("Não foi possível abrir a inscrição", { description: (err as Error).message });
     }
   }
 
@@ -294,12 +360,7 @@ export function CheckinView() {
     <PageContainer width="content">
       <PageHeader
         title="Recepção"
-        description="Check-in de inscrições e ingressos — registra no dispositivo e sincroniza depois."
-        actions={
-          checkinsPendentes && checkinsPendentes > 0 ? (
-            <StatusBadge tone="warning">{checkinsPendentes} aguardando sincronização</StatusBadge>
-          ) : null
-        }
+        description="Check-in de inscrições e ingressos — registrado em tempo real."
       />
 
       <Card className="mb-4">
@@ -381,8 +442,12 @@ export function CheckinView() {
       ) : selecionada ? (
         <ActionCard
           det={selecionada}
+          ocupado={ocupado}
           onClose={() => setSelecionada(null)}
-          onCheckin={fazerCheckinComTermo}
+          onCheckin={() =>
+            fazerCheckinComTermo(selecionada.inscricao, selecionada.pessoa?.nome_completo ?? "")
+          }
+          onCheckout={() => fazerCheckoutInscricao(selecionada.inscricao.id)}
         />
       ) : resultados.length > 0 ? (
         <Card className="mb-4">
@@ -402,6 +467,7 @@ export function CheckinView() {
                       <p className="truncate font-medium">{pessoa?.nome_completo ?? "—"}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {evento?.nome ?? "—"}
+                        {evento ? ` · ${formatDate(evento.data_inicio)}` : ""}
                       </p>
                     </div>
                     <StatusBadge tone={STATUS_TONE[inscricao.status] ?? "neutral"}>
@@ -434,10 +500,7 @@ export function CheckinView() {
             else setTermoSheet((s) => (s ? { ...s, open } : null));
           }}
           onSuccess={() => {
-            fazerCheckin(termoSheet.inscricaoId).then((r) => {
-              if (r) emitir("ok", "ENTRADA LIBERADA", termoSheet.pessoaNome || undefined);
-              else emitir("error", "FALHA NO CHECK-IN", "Tente novamente.");
-            });
+            void fazerCheckinInscricao(termoSheet.inscricaoId, termoSheet.pessoaNome);
             setTermoSheet(null);
           }}
         />
@@ -445,49 +508,5 @@ export function CheckinView() {
 
       <ScanFeedback feedback={feedback} onDone={() => setFeedback(null)} />
     </PageContainer>
-  );
-}
-
-function QRGenerator() {
-  const [qrInscId, setQrInscId] = useState("");
-
-  return (
-    <Card>
-      <CardContent className="pt-4">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Gerar QR de uma inscrição
-        </h3>
-        <p className="text-sm text-muted-foreground mb-3">
-          Informe o ID da inscrição para visualizar/baixar o QR code.
-        </p>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Cole o UUID da inscrição"
-            onChange={(e) => {
-              const id = e.target.value.trim();
-              if (id && parseInscricaoQr(`PERS1:${id}`)) {
-                setQrInscId(id);
-              }
-            }}
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              // estado já atualizado via onChange
-            }}
-          >
-            Gerar
-          </Button>
-        </div>
-        {qrInscId && (
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <QRCodeSVG value={encodeInscricaoQr(qrInscId)} size={180} />
-            </div>
-            <p className="text-xs text-muted-foreground font-mono">{encodeInscricaoQr(qrInscId)}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }

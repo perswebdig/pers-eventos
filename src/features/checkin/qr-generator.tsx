@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, X } from "lucide-react";
-import { toast } from "sonner";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,33 +72,4 @@ export function QRGenerator() {
       </CardContent>
     </Card>
   );
-}
-
-function assert(cond: unknown, msg: string): asserts cond {
-  if (!cond) throw new Error(`FALHOU: ${msg}`);
-  console.log(`OK  ${msg}`);
-}
-
-function pessoa(nome: string) {
-  const ts = new Date().toISOString();
-  return {
-    id: crypto.randomUUID(),
-    nome_completo: nome,
-    cpf: null,
-    rg: null,
-    data_nascimento: null,
-    telefone: null,
-    email: null,
-    endereco: null,
-    contato_emergencia_nome: null,
-    contato_emergencia_telefone: null,
-    restricoes_alimentares: null,
-    condicoes_saude: null,
-    medicacoes: null,
-    observacoes: null,
-    consentimento_lgpd: true,
-    created_at: ts,
-    updated_at: ts,
-    sync_status: "synced" as const,
-  };
 }

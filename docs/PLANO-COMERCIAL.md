@@ -7,23 +7,23 @@
 SaaS multi-tenant funcional:
 
 - **Tenancy**: `estabelecimentos` + `tenant_id` + RLS; papéis `super_admin`, `tenant_admin`, `staff`, `recepcao`, `cliente`; onboarding self-service em `/onboarding`; área do super admin em `/admin` (estabelecimentos e usuários).
-- **Operação de eventos**: eventos, lotes (`ticket_types`), inscrições, termos LGPD, check-in com QR e sync offline-first (Dexie/IndexedDB), relatórios com export CSV, PWA com service worker.
+- **Operação de eventos**: eventos, lotes (`ticket_types`), inscrições, termos LGPD, check-in com QR online, relatórios com export CSV.
 - **Vendas**: checkout cria `orders`; confirmação por webhook genérico (`src/app/api/webhooks/payment/route.ts`, header `x-webhook-secret`, RPC `confirm_order_payment` que gera ingressos com hash de QR). **Não há PSP real**: Pix/cartão são apenas intenção de pagamento.
 - **Portal do cliente**: login obrigatório, eventos, checkout, carteira de ingressos com QR, termos.
-- **Infra**: Next.js + Supabase (auth/DB), PM2 single-instance na porta 3010, deploy via `scripts/deploy.sh`, health em `/api/health`, testes (vitest 53 unit, 10 e2e smoke).
+- **Infra**: Next.js + Supabase (auth/DB), PM2 single-instance na porta 3010, deploy via `scripts/deploy.sh`, health em `/api/health`, testes (vitest 44 unit, 7 e2e smoke).
 
 ## 2. Lacunas para comercializar
 
-| # | Lacuna | Impacto |
-|---|---|---|
-| 1 | Pagamento real (Pix/cartão) | Sem isso não há receita de ingressos |
-| 2 | Cobrança do próprio SaaS (planos/assinatura) | Sem isso não há receita de assinatura |
-| 3 | E-mails transacionais (compra, reset de senha) | Suporte manual e recuperação de conta quebrada |
-| 4 | Página pública de evento + checkout guest | Organizador não vende para quem não tem conta |
-| 5 | Cupons, meia-entrada, reembolso, transferência | Paridade com concorrentes (Sympla, Ingresse) |
-| 6 | CI/CD, staging, observabilidade, backups testados | Risco operacional inaceitável em produção paga |
-| 7 | LGPD operacional, 2FA, rate limit, headers | Venda para clientes maiores exige isso |
-| 8 | Go-to-market: landing, pricing, docs, suporte | Conversão e retenção |
+| #   | Lacuna                                            | Impacto                                        |
+| --- | ------------------------------------------------- | ---------------------------------------------- |
+| 1   | Pagamento real (Pix/cartão)                       | Sem isso não há receita de ingressos           |
+| 2   | Cobrança do próprio SaaS (planos/assinatura)      | Sem isso não há receita de assinatura          |
+| 3   | E-mails transacionais (compra, reset de senha)    | Suporte manual e recuperação de conta quebrada |
+| 4   | Página pública de evento + checkout guest         | Organizador não vende para quem não tem conta  |
+| 5   | Cupons, meia-entrada, reembolso, transferência    | Paridade com concorrentes (Sympla, Ingresse)   |
+| 6   | CI/CD, staging, observabilidade, backups testados | Risco operacional inaceitável em produção paga |
+| 7   | LGPD operacional, 2FA, rate limit, headers        | Venda para clientes maiores exige isso         |
+| 8   | Go-to-market: landing, pricing, docs, suporte     | Conversão e retenção                           |
 
 ## 3. Fases
 

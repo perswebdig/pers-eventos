@@ -62,16 +62,6 @@ jobs:
       - name: Run unit tests
         run: npm run test --if-present
 
-      - name: Run verification scripts
-        run: |
-          npm run db:verify
-          npm run sync:verify
-          npm run pessoas:verify
-          npm run eventos:verify
-          npm run checkin:verify
-          npm run ingressos:verify
-          npm run relatorios:verify
-
   # ─────────────────────────────────────────────────────────────
   # Build (runs after lint + test pass)
   # ─────────────────────────────────────────────────────────────
@@ -93,7 +83,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate PWA icons
+      - name: Generate icons
         run: npm run icons
 
       - name: Build Next.js app
