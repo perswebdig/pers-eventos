@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, CalendarDays, Pencil, Plus, Receipt, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Toolbar, ToolbarSearch } from "@/components/toolbar";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,14 @@ import {
 } from "./estabelecimento-schema";
 import type { Estabelecimento } from "@/types/database";
 
+interface EstabelecimentoMetricas {
+  pessoas: number;
+  eventos: number;
+  pedidos: number;
+}
+
+type EstabelecimentoComMetricas = Estabelecimento & { metricas: EstabelecimentoMetricas };
+
 // Cliente HTTP para as rotas do Super Admin.
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -54,14 +63,15 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function EstabelecimentosView() {
-  const [itens, setItens] = useState<Estabelecimento[] | null>(null);
+  const [itens, setItens] = useState<EstabelecimentoComMetricas[] | null>(null);
+  const [busca, setBusca] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Estabelecimento | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Estabelecimento | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      setItens(await api<Estabelecimento[]>("/api/admin/estabelecimentos"));
+      setItens(await api<EstabelecimentoComMetricas[]>("/api/admin/estabelecimentos"));
     } catch (err) {
       toast.error("Falha ao carregar", { description: (err as Error).message });
       setItens([]);
@@ -71,6 +81,17 @@ export function EstabelecimentosView() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  const filtrados = useMemo(() => {
+    if (!itens) return [];
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return itens;
+    return itens.filter((e) =>
+      [e.nome, e.slug, e.cidade ?? "", e.estado ?? ""].some((campo) =>
+        campo.toLowerCase().includes(termo),
+      ),
+    );
+  }, [itens, busca]);
 
   async function handleSubmit(values: EstabelecimentoFormValues) {
     try {
@@ -121,7 +142,11 @@ export function EstabelecimentosView() {
         <div>
           <h1 className="text-xl font-semibold">Estabelecimentos</h1>
           <p className="text-sm text-muted-foreground">
-            {itens === null ? "Carregando…" : `${itens.length} estabelecimento(s)`}
+            {itens === null
+              ? "Carregando…"
+              : busca.trim()
+                ? `${filtrados.length} de ${itens.length} estabelecimento(s)`
+                : `${itens.length} estabelecimento(s)`}
           </p>
         </div>
         <Button
@@ -133,6 +158,16 @@ export function EstabelecimentosView() {
           <Plus className="size-4" /> Novo
         </Button>
       </div>
+
+      {itens !== null && itens.length > 0 && (
+        <Toolbar className="mb-4">
+          <ToolbarSearch
+            value={busca}
+            onValueChange={setBusca}
+            placeholder="Buscar por nome, slug ou cidade…"
+          />
+        </Toolbar>
+      )}
 
       {itens === null ? (
         <Card>
@@ -157,6 +192,17 @@ export function EstabelecimentosView() {
             </Button>
           }
         />
+      ) : filtrados.length === 0 ? (
+        <EmptyState
+          icon="search"
+          title="Nenhum resultado"
+          description="Nenhum estabelecimento corresponde à busca."
+          actions={
+            <Button variant="outline" onClick={() => setBusca("")}>
+              Limpar busca
+            </Button>
+          }
+        />
       ) : (
         <Card className="overflow-hidden p-0">
           <Table>
@@ -165,12 +211,15 @@ export function EstabelecimentosView() {
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden sm:table-cell">Slug</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
+                <TableHead className="hidden lg:table-cell">Pessoas</TableHead>
+                <TableHead className="hidden lg:table-cell">Eventos</TableHead>
+                <TableHead className="hidden lg:table-cell">Pedidos</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {itens.map((e) => (
+              {filtrados.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>
                     <span className="inline-flex items-center gap-2 font-medium">
@@ -183,6 +232,24 @@ export function EstabelecimentosView() {
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {e.cidade ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="size-3.5" />
+                      {e.metricas.pessoas}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <CalendarDays className="size-3.5" />
+                      {e.metricas.eventos}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Receipt className="size-3.5" />
+                      {e.metricas.pedidos}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge
