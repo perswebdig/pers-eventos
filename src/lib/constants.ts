@@ -15,6 +15,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Painel", roles: ["tenant_admin", "staff"] },
   { href: "/pessoas", label: "Pessoas", roles: ["tenant_admin", "staff"] },
   { href: "/eventos", label: "Eventos", roles: ["tenant_admin", "staff"] },
+  { href: "/pedidos", label: "Pedidos", roles: ["tenant_admin", "staff"] },
   { href: "/checkin", label: "Recepção", roles: ["tenant_admin", "staff"] },
   { href: "/termos", label: "Termos", roles: ["tenant_admin", "staff"] },
   { href: "/usuarios", label: "Usuários", roles: ["tenant_admin"] },

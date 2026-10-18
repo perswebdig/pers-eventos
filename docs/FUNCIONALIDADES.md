@@ -39,6 +39,7 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 ### 4.2 Administração da plataforma (super admin)
 
 - CRUD de estabelecimentos (nome, slug, endereço, ativo) em `/admin/estabelecimentos`.
+- Listagem com **busca** (nome, slug, cidade/UF) e **métricas por estabelecimento** (pessoas na base, eventos e pedidos).
 - Gestão de usuários e papéis por estabelecimento (`/admin/usuarios`, `/api/usuarios`).
 
 ### 4.3 Pessoas
@@ -68,8 +69,10 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 ### 4.5 Ingressos e vendas
 
 - Inscrições em eventos (portal) com status: inscrito, confirmado, check-in, check-out, cancelado.
-- Checkout com escolha de lote, quantidade e forma de pagamento (Pix/cartão como intenção) — ou setor com lugar marcado (mapa de cadeiras).
+- Checkout com escolha de lote, quantidade e forma de pagamento (Pix/cartão como intenção) — ou **ambiente** (espaço/setor) com lugar marcado, destacado no resumo da compra e na tela de sucesso.
 - Pedidos (`orders`): pending/paid/canceled/refunded; confirmação idempotente via webhook que gera os ingressos com `qr_code_hash` único (RPC `confirm_order_payment`).
+- Tela **Pedidos** (`/pedidos`, equipe do estabelecimento): lista com busca por cliente/evento e filtros por status, mostrando cliente, evento, item (lote ou ambiente), valor e forma de pagamento.
+- **Modo demonstração** (`DEMO_MODE=true`): sem PSP real, o cliente confirma o próprio pagamento no checkout ("Confirmar pagamento (demo)") e a equipe aprova/cancela pedidos na tela Pedidos — confirmação gera os ingressos; cancelamento devolve as cadeiras reservadas à venda. Com `DEMO_MODE` desativado, as rotas respondem 403 e o fluxo fica aguardando o webhook.
 - Carteira de ingressos no portal com QR por ingresso, status (válido/utilizado) e setor/fileira/número quando for lugar marcado.
 
 ### 4.6 Recepção / check-in (offline-first)
@@ -121,6 +124,8 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 ## 5. Operação e infraestrutura
 
 - **Deploy**: `npm run deploy` — build de produção, restart PM2 e health check em `/api/health`.
+- **Produção**: `https://eventos.persweb.digital` (nginx com proxy para `127.0.0.1:3010` + certificado Let's Encrypt; HTTP redireciona para HTTPS).
+- **Variáveis de ambiente relevantes**: `DEMO_MODE=true` ativa o modo demonstração de pagamentos (ver 4.5).
 - **Banco**: 12 migrações versionadas (`supabase/migrations/`) cobrindo schema, RLS, storage, multi-tenant, ticketing/financeiro, confirmação de pagamento, guarda do trigger de papel (service role), espaços/assentos e vínculo pessoas ⇄ estabelecimentos.
 - **Scripts de verificação**: `verify-dexie`, `verify-sync`, `verify-pessoas`, `verify-eventos`, `verify-checkin`, `verify-ingressos`, `verify-relatorios`, `verify-termos`.
 - **Correção crítica aplicada**: `postcss.config.js` restaurado (`@tailwindcss/postcss`) — o build de produção não processava Tailwind (CSS quebrado mascarado pelo cache do service worker).
@@ -134,7 +139,7 @@ RLS por `tenant_id` em todas as tabelas; primeiro usuário criado no sistema vir
 
 ## 7. Limitações conhecidas (próximo ciclo)
 
-- Pagamento é apenas intenção — falta PSP real (Pix/cartão) e conciliação.
+- Pagamento é apenas intenção — falta PSP real (Pix/cartão) e conciliação; enquanto isso, o **modo demonstração** (`DEMO_MODE`) permite aprovar/cancelar pedidos manualmente.
 - Sem cobrança de assinatura dos estabelecimentos (planos/limites).
 - Sem e-mails transacionais (confirmação de compra, reset de senha) e sem notificações WhatsApp.
 - Venda exige login — falta página pública do evento com checkout guest.

@@ -1,4 +1,5 @@
 import { requireEstabelecimento } from "@/lib/auth/session";
+import { isDemoMode } from "@/lib/env.server";
 import { PageContainer } from "@/components/page-container";
 import { PortalCheckout } from "@/features/portal/checkout-evento";
 
@@ -10,7 +11,7 @@ export default async function CheckoutEventoPage({ params }: { params: Promise<{
 
   return (
     <PageContainer width="form">
-      <PortalCheckout key={id} />
+      <PortalCheckout key={id} demoMode={isDemoMode()} />
     </PageContainer>
   );
 }

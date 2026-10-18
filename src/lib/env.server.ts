@@ -8,6 +8,12 @@ export const SUPABASE_SECRET_KEY =
 
 export const isSupabaseAdminConfigured = SUPABASE_URL.length > 0 && SUPABASE_SECRET_KEY.length > 0;
 
+// Modo demonstração: libera aprovação manual de pagamentos (botão no checkout
+// e tela de Pedidos). Ative com DEMO_MODE=true no ambiente do servidor.
+export function isDemoMode(): boolean {
+  return process.env.DEMO_MODE === "true";
+}
+
 export function assertSupabaseAdminConfigured(): void {
   if (!isSupabaseAdminConfigured) {
     throw new Error(

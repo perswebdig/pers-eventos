@@ -13,6 +13,7 @@ import {
   Minus,
   Plus,
   QrCode,
+  Sparkles,
   Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ async function getJson<T>(url: string): Promise<T> {
   return (body as { data: T }).data;
 }
 
-export function PortalCheckout() {
+export function PortalCheckout({ demoMode = false }: { demoMode?: boolean }) {
   const params = useParams<{ id: string }>();
   const eventoId = params?.id ?? "";
 
@@ -59,6 +60,7 @@ export function PortalCheckout() {
   const [pagamento, setPagamento] = useState<"pix" | "credit_card">("pix");
   const [enviando, setEnviando] = useState(false);
   const [pedido, setPedido] = useState<Order | null>(null);
+  const [confirmandoDemo, setConfirmandoDemo] = useState(false);
 
   // Lugar marcado: setor escolhido + mapa + seleção.
   const [espacoId, setEspacoId] = useState<string>("");
@@ -208,6 +210,29 @@ export function PortalCheckout() {
     }
   }
 
+  // Modo demonstração: confirma o pagamento na hora (sem PSP).
+  async function handleConfirmarDemo() {
+    if (!pedido) return;
+    setConfirmandoDemo(true);
+    try {
+      const res = await fetch("/api/portal/checkout/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: pedido.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? "Erro ao confirmar");
+      setPedido({ ...pedido, status: "paid" });
+      toast.success("Pagamento confirmado!");
+    } catch (err) {
+      toast.error("Não foi possível confirmar o pagamento", {
+        description: (err as Error).message,
+      });
+    } finally {
+      setConfirmandoDemo(false);
+    }
+  }
+
   if (erro) {
     return (
       <Card>
@@ -235,7 +260,11 @@ export function PortalCheckout() {
   }
 
   if (pedido) {
+    const pago = pedido.status === "paid";
     const lugaresEscolhidos = modoEspaco ? selecionados.size : 0;
+    const rotulosLugares = (assentos ?? [])
+      .filter((a) => selecionados.has(a.id))
+      .map((a) => rotuloAssento(a.fileira, a.numero));
     return (
       <Card className="border-success/30">
         <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
@@ -244,13 +273,29 @@ export function PortalCheckout() {
           </span>
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">
-              {lugaresEscolhidos > 0 ? "Lugares reservados!" : "Pedido registrado!"}
+              {pago
+                ? "Pagamento confirmado!"
+                : lugaresEscolhidos > 0
+                  ? "Lugares reservados!"
+                  : "Pedido registrado!"}
             </h2>
             <p className="text-sm text-muted-foreground">
               {pedido.quantity} ingresso(s) para <strong>{dados.evento.nome}</strong>
             </p>
           </div>
           <div className="w-full max-w-sm space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
+            {pedido.espaco_id && espacoSel ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Ambiente</span>
+                <span className="text-right font-medium">{espacoSel.nome}</span>
+              </div>
+            ) : null}
+            {pedido.espaco_id && rotulosLugares.length > 0 ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Lugares</span>
+                <span className="text-right font-medium">{rotulosLugares.join(", ")}</span>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Total</span>
               <span className="font-semibold">{formatCurrency(Number(pedido.total_amount))}</span>
@@ -261,19 +306,44 @@ export function PortalCheckout() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Status</span>
-              <StatusBadge tone="warning">Aguardando pagamento</StatusBadge>
+              {pago ? (
+                <StatusBadge tone="success">Confirmado</StatusBadge>
+              ) : (
+                <StatusBadge tone="warning">Aguardando pagamento</StatusBadge>
+              )}
             </div>
           </div>
-          {pedido.espaco_id ? (
+          {!pago && pedido.espaco_id ? (
             <p className="max-w-sm text-xs text-warning">
               Seus lugares ficam reservados por <strong>30 minutos</strong>. Após esse prazo sem
               confirmação do pagamento, eles voltam a ficar disponíveis.
             </p>
           ) : null}
-          <p className="max-w-sm text-xs text-muted-foreground">
-            O pagamento é confirmado pelo estabelecimento. Após a confirmação, seus QR Codes de
-            check-in aparecerão em <strong>Meus Ingressos</strong>.
-          </p>
+          {pago ? (
+            <p className="max-w-sm text-xs text-muted-foreground">
+              Seus QR Codes de check-in já estão disponíveis em <strong>Meus Ingressos</strong>.
+            </p>
+          ) : (
+            <p className="max-w-sm text-xs text-muted-foreground">
+              O pagamento é confirmado pelo estabelecimento. Após a confirmação, seus QR Codes de
+              check-in aparecerão em <strong>Meus Ingressos</strong>.
+            </p>
+          )}
+          {demoMode && !pago ? (
+            <div className="w-full max-w-sm space-y-2 rounded-lg border border-dashed border-info/40 bg-info/5 p-3">
+              <p className="text-xs text-info">
+                Modo demonstração ativo — confirme o pagamento agora para simular a aprovação.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => void handleConfirmarDemo()}
+                disabled={confirmandoDemo}
+              >
+                <Sparkles className="size-4" />
+                {confirmandoDemo ? "Confirmando…" : "Confirmar pagamento (demo)"}
+              </Button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap justify-center gap-2">
             <Button render={<Link href="/portal/ingressos">Ver meus ingressos</Link>}>
               Ver meus ingressos
@@ -425,7 +495,8 @@ export function PortalCheckout() {
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Você escolheu lugares marcados — a quantidade é definida no mapa abaixo.
+                Você escolheu um ambiente com lugares marcados — a quantidade é definida no mapa
+                abaixo.
               </p>
             )}
           </CardContent>
@@ -436,11 +507,14 @@ export function PortalCheckout() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Armchair className="size-4 text-primary" /> Lugares marcados
+              <Armchair className="size-4 text-primary" /> Ambiente
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Escolha o ambiente (espaço/setor) para ver o mapa de cadeiras e os preços.
+            </p>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div role="radiogroup" aria-label="Setor" className="grid gap-2">
+            <div role="radiogroup" aria-label="Ambiente" className="grid gap-2">
               {dados.espacos.map((e) => {
                 const esgotado = e.livres === 0;
                 const selecionado = e.id === espacoId;
@@ -542,7 +616,7 @@ export function PortalCheckout() {
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Escolha um setor para ver o mapa de cadeiras.
+                Escolha um ambiente para ver o mapa de cadeiras.
               </p>
             )}
           </CardContent>
@@ -556,7 +630,8 @@ export function PortalCheckout() {
               {modoEspaco ? (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    {espacoSel?.nome} · {selecionados.size} lugar(es) · {PAGAMENTO_LABEL[pagamento]}
+                    Ambiente: <span className="font-medium text-foreground">{espacoSel?.nome}</span>{" "}
+                    · {selecionados.size} lugar(es) · {PAGAMENTO_LABEL[pagamento]}
                   </p>
                   <p className="text-lg font-semibold tabular-nums">
                     {formatCurrency(totalEspaco)}
